@@ -13,34 +13,54 @@
 #define PORT htons(21212)
 #define BUFSIZE 1024
 
-void Greeting(int gn) {
+typedef void (*FunctionWithOneParameter) (struct klient *gn);
+typedef struct functionMETA {
+    FunctionWithOneParameter funcPtr;
+    char *funcName;
+} functionMETA;
+struct klient {
+    int nr;
+    char state[10];
+} klient;
+
+typedef struct klient * pmystruct;
+
+pmystruct getpstruct() {
+    pmystruct temp=(pmystruct)malloc(sizeof(pmystruct*)) ;
+    return temp;
+}
+
+void Greeting( pmystruct gn) {
+
     char message[] = "* OK IMAP4rev1 Service Ready\n";
-    if (send(gn, message, strlen(message), 0) != strlen(message))
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Greeting error\n");
-        close(gn);
     }
 }
 
 //          Client Commands - Any State
 
-void Capability(int gn) {
+void Capability( pmystruct gn) {
+
     char message[] = "OK CAPABILITY completed \n";
-    if (send(gn, message, strlen(message), 0) != strlen(message))
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("CAPABILITY error\n");
     }
 }
-void Noop(int gn) {
+void Noop( pmystruct gn) {
+
     char message[] = "OK NOOP completed\n";
-    if (send(gn, message, strlen(message), 0) != strlen(message))
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("NOOP error\n");
     }
 }
-void Logout(int gn) {
+void Logout( pmystruct gn) {
+
     char message[] = "* BYE IMAP4rev1 Server logging out\n";
-    if (send(gn, message, strlen(message), 0) != strlen(message))
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Logout error\n");
     }
@@ -48,25 +68,27 @@ void Logout(int gn) {
 
 //          Client Commands - Not Authenticated State
 
-void Starttls(int gn) {
+void Starttls( pmystruct gn) {
+
     char message[] = "OK STARTTLS completed \n";
-    if (send(gn, message, strlen(message), 0) != strlen(message))
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Starttls error\n");
     }
 }
-void Login(int gn, char *user, char *password) {
+void Login(pmystruct gn/*, char *user, char *password*/) {
 
     char message[] = "OK LOGIN completed \n";
-    if (send(gn, message, strlen(message), 0) != strlen(message))
+    strcpy(gn->state,"auth");
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Login error\n");
     }  
 
 }
-void Authenticate(int gn/*authentication mechanism name*/) {
+void Authenticate( pmystruct gn/*authentication mechanism name*/) {
     char message[] = "OK AUTHENTICATE completed \n";
-    if (send(gn, message, strlen(message), 0) != strlen(message))
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Authenticate error\n");
     }   
@@ -150,97 +172,39 @@ void Uid(int gn/*command name
 
 //          Command parser
 
-void CommandParser(int gn, char *command) {
+void CommandParser( pmystruct gn, char *command) {
 
     int tmp=0, argcount=1, max=0, current=0;
+    bool found=false;
     char *com;
+    struct functionMETA anystate[3] = {{Capability, "Capability"}, {Noop, "Noop"} , {Logout, "Logout"}};
+    struct functionMETA nonauth[3] = {{Starttls, "Starttls"}, {Authenticate, "Authenticate"} , {Login, "Login"}};
     for (int i=0;i<=strlen(command);i++) {
         if (command[i] == 32) {
-            if (max<current) {
-                max = current;
-            } 
-            current = 0;
             argcount++;
-        } else if (command[i] == 0) {
-            if (max<current) {
-                max = current;
-            }
-        } else 
-            current++;
-    }
-    //printf("Args %d  Max %d\n", argcount, max);
-    char temp[10][64];
-    //printf("%s\n", "petla 1 skonczona" );
-    current=0;
-    for (int i=0;i<strlen(command);i++) {
-        if (command[i]!=32 || command[i]!=0){
-            temp[tmp][current] = command[i];
-            //printf("%c\n", temp[tmp][current]);
-            current++;
-        } else {
-            temp[tmp][current] = '\0';
-            tmp++;
-            current=0;
         }
     }
-    //printf("%s\n", "petla 2 skonczona" );
-    printf("%s\n", temp[0] );
-    com = temp[0];
-
-    if (strcmp(com,"logout")==0){
-        Logout(gn);
-    } else if (strcmp(com,"capability")==0) {
-        Capability(gn);
-    } else if (strcmp(com,"noop")==0) {
-        Noop(gn);
-    } else if (strcmp(com,"login")==0) {
-        //Login(gn, name, pass);
-    } else if (strcmp(com,"authenticate")==0) {
-        Authenticate(gn);
-    } else if (strcmp(com,"starttls")==0) {
-        Starttls(gn);
-    } else if (strcmp(com,"select")==0) {
-        //Select(gn);
-    } else if (strcmp(com,"examine")==0) {
-        Examine(gn);
-    } else if (strcmp(com,"create")==0) {
-        Create(gn);
-    } else if (strcmp(com,"delete")==0) {
-        Delete(gn);
-    } else if (strcmp(com,"rename")==0) {
-        Rename(gn);
-    } else if (strcmp(com,"subscribe")==0) {
-        Subscribe(gn);
-    } else if (strcmp(com,"unsubscribe")==0) {
-        Unsubscribe(gn);
-    } else if (strcmp(com,"list")==0) {
-        List(gn);
-    } else if (strcmp(com,"lsub")==0) {
-        Lsub(gn);
-    } else if (strcmp(com,"status")==0) {
-        Status(gn);
-    } else if (strcmp(com,"append")==0) {
-        Append(gn);
-    } else if (strcmp(com,"check")==0) {
-        Check(gn);
-    } else if (strcmp(com,"close")==0) {
-        Close(gn);
-    } else if (strcmp(com,"expunge")==0) {
-        Expunge(gn);
-    } else if (strcmp(com,"search")==0) {
-        Search(gn);
-    } else if (strcmp(com,"fetch")==0) {
-        Fetch(gn);
-    } else if (strcmp(com,"store")==0) {
-        Store(gn);
-    } else if (strcmp(com,"copy")==0) {
-        Copy(gn);
-    } else if (strcmp(com,"uid")==0) {
-        Uid(gn);
-    } else {
-        strcpy(command,"command unknown or arguments invalid\n");
-        send(gn, command, strlen(command), 0);
+    com = strtok(command, " \n");
+    
+    for (int i = 0; i<3; i++) {
+        if (strcmp(com,anystate[i].funcName)==0) {
+            anystate[i].funcPtr(gn);
+            found=true;
+        }
+        if (strcmp(com,nonauth[i].funcName)==0) {
+            nonauth[i].funcPtr(gn);
+            found=true;
+        }
     }
+    if (!found) {
+        char message[] = "command not found\n";
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("command debug error\n");
+            close(gn->nr);
+        }
+    }
+    printf("Client state: %s\n", gn->state);
 }
 
 void Licznik(char *licznik) {
@@ -325,7 +289,7 @@ void ObsluzPolaczenie(int gn)
 
 int main(void)
 {
-    int gn_nasluch, gn_klienta;
+    int gn_nasluch;
     struct sockaddr_in adr;
     socklen_t dladr = sizeof(struct sockaddr_in);
     char bufor[BUFSIZE];
@@ -351,12 +315,13 @@ int main(void)
     
     while(1)
     {
+        pmystruct user= getpstruct();
         dladr = sizeof(struct sockaddr_in);
-        gn_klienta = accept(gn_nasluch, (struct sockaddr*) &adr, &dladr);
+        user->nr = accept(gn_nasluch, (struct sockaddr*) &adr, &dladr);
         time_t rawtime;
         time ( &rawtime );
 
-        if (gn_klienta < 0) {
+        if (user->nr < 0) {
             printf("S: accept zwrocil blad\n");
             continue;
         }
@@ -371,14 +336,15 @@ int main(void)
         {
             /* proces potomny */
             char licznik[] = "a000";
+            strcpy(user->state,"nonauth");
             printf("S: zaczynam obsluge\n");
-            Greeting(gn_klienta);
+            Greeting(user);
             while(1) {
                 memset(bufor, 0, 1024);
-                recv(gn_klienta, bufor, 1024, 0);
-                printf("C%d: %s %s", gn_klienta, licznik, bufor);
+                recv(user->nr, bufor, 1024, 0);
+                printf("C%d: %s %s", user->nr, licznik, bufor);
                 Licznik(licznik);
-                CommandParser(gn_klienta, bufor);
+                CommandParser(user, bufor);
             }
             printf("koncze proces potomny");
             exit(0);

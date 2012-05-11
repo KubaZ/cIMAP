@@ -1,0 +1,74 @@
+/*
+    //printf("Args %d  Max %d\n", argcount, max);
+    char temp[10][64];
+    //printf("%s\n", "petla 1 skonczona" );
+    current=0;
+    for (int i=0;i<strlen(command);i++) {
+        if (command[i]!=32 || command[i]!=0){
+            temp[tmp][current] = command[i];
+            //printf("%c\n", temp[tmp][current]);
+            current++;
+        } else {
+            temp[tmp][current] = '\0';
+            tmp++;
+            current=0;
+        }
+    }*/
+    //printf("%s\n", "petla 2 skonczona" );
+/*    printf("%s\n", temp[0] );
+    com = temp[0];*/
+
+    /*if (strcmp(com,"logout")==0){
+        Logout(gn);
+    } else if (strcmp(com,"capability")==0) {
+        Capability(gn);
+    } else if (strcmp(com,"noop")==0) {
+        Noop(gn);
+    } else if (strcmp(com,"login")==0) {
+        //Login(gn, name, pass);
+    } else if (strcmp(com,"authenticate")==0) {
+        Authenticate(gn);
+    } else if (strcmp(com,"starttls")==0) {
+        Starttls(gn);
+    } else if (strcmp(com,"select")==0) {
+        //Select(gn);
+    } else if (strcmp(com,"examine")==0) {
+        Examine(gn);
+    } else if (strcmp(com,"create")==0) {
+        Create(gn);
+    } else if (strcmp(com,"delete")==0) {
+        Delete(gn);
+    } else if (strcmp(com,"rename")==0) {
+        Rename(gn);
+    } else if (strcmp(com,"subscribe")==0) {
+        Subscribe(gn);
+    } else if (strcmp(com,"unsubscribe")==0) {
+        Unsubscribe(gn);
+    } else if (strcmp(com,"list")==0) {
+        List(gn);
+    } else if (strcmp(com,"lsub")==0) {
+        Lsub(gn);
+    } else if (strcmp(com,"status")==0) {
+        Status(gn);
+    } else if (strcmp(com,"append")==0) {
+        Append(gn);
+    } else if (strcmp(com,"check")==0) {
+        Check(gn);
+    } else if (strcmp(com,"close")==0) {
+        Close(gn);
+    } else if (strcmp(com,"expunge")==0) {
+        Expunge(gn);
+    } else if (strcmp(com,"search")==0) {
+        Search(gn);
+    } else if (strcmp(com,"fetch")==0) {
+        Fetch(gn);
+    } else if (strcmp(com,"store")==0) {
+        Store(gn);
+    } else if (strcmp(com,"copy")==0) {
+        Copy(gn);
+    } else if (strcmp(com,"uid")==0) {
+        Uid(gn);
+    } else {
+        strcpy(command,"command unknown or arguments invalid\n");
+        send(gn, command, strlen(command), 0);
+    }*/

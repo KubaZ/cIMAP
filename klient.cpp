@@ -21,6 +21,7 @@ int main(void)
     char sciezka[512];
     long dl_pliku, odebrano, odebrano_razem, wiadomosc;
     socklen_t dl = sizeof(struct sockaddr_in);
+    memset(bufor, 0, 1024);
     
     h = gethostbyname(nazwa);
     if (h == NULL)
@@ -45,20 +46,20 @@ int main(void)
         return 1;
     }
     printf("Polaczenie nawiazane\n");
-        while(1) {
-            memset(bufor, 0, 1024);
-            recv(gn, bufor, 1024, 0);
-            printf("S: %s\n", bufor);
-            printf("Podaj wiadomosc: \n");
-            fflush(stdin);      
-            fgets(sciezka, 1024, stdin);
-            if (send(gn, sciezka, strlen(sciezka), 0) != strlen(sciezka))
-            {
-                printf("Blad przy wysylaniu sciezki\n");
-                close(gn);
-                return 1;
-            }
+    while(1) {
+        
+        recv(gn, bufor, 1024, 0);
+        printf("S: %s\n", bufor);
+        printf("Podaj wiadomosc: \n");
+        fflush(stdin);      
+        fgets(sciezka, 1024, stdin);
+        if (send(gn, sciezka, strlen(sciezka), 0) != strlen(sciezka))
+        {
+            printf("Blad przy wysylaniu sciezki\n");
+            close(gn);
+            return 1;
         }
+    }
     
 
     /*printf("Podaj sciezke do pliku: \n");

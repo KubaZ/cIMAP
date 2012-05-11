@@ -1,19 +1,20 @@
 #include <stdio.h>
 #include <string>
 #include <stdlib.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
 #include <fstream>
-#include <signal.h>
+
 
 #define PORT htons(21212)
 #define BUFSIZE 1024
 
+/**/
 typedef void (*FunctionWithOneParameter) (struct klient *gn);
 typedef void (*FunctionWithTwoParameter) (struct klient *gn, char *arg1);
 typedef void (*FunctionWithThreeParameter) (struct klient *gn, char *arg1, char *arg2);
@@ -33,6 +34,7 @@ typedef struct functionThreeMETA {
     FunctionWithThreeParameter funcPtr;
     char funcName[20];
 } functionThreeMETA;
+
 /*Struktura Klienta zawierająca jego nr gniazda oraz stan*/
 struct klient {
     int nr;
@@ -333,6 +335,41 @@ void Licznik(char *licznik) {
     return;    
 }*/
 
+int recvtimeout(int s, char *buf, int len, int timeout)
+{
+    fd_set fds;
+    int n;
+    struct timeval tv;
+
+    // set up the file descriptor set
+    FD_ZERO(&fds);
+    FD_SET(s, &fds);
+
+    // set up the struct timeval for the timeout
+    tv.tv_sec = timeout;
+    tv.tv_usec = 0;
+
+    // wait until timeout or data received
+    n = select(s+1, &fds, NULL, NULL, &tv);
+    if (n == 0) return -2; // timeout!
+    if (n == -1) return -1; // error
+
+    // data must be here, so do a normal recv()
+    return recv(s, buf, len, 0);
+}
+
+void Timeout(pmystruct gn) {
+    
+    char message[] = "* Connection Timeout\n* BYE IMAP4rev1 Server logging out\n";  
+    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+    {
+        printf("Timeout message error\n");
+    }
+    close(gn->nr);
+    printf("S: Connection with C%d timed out\n", gn->nr);
+    free(gn);
+    exit(0);
+}
 
 int main(void)
 {
@@ -340,7 +377,6 @@ int main(void)
     struct sockaddr_in adr;
     socklen_t dladr = sizeof(struct sockaddr_in);
     char bufor[BUFSIZE];
-    long wiadomosc;
     FILE *file; 
     
     gn_nasluch = socket(AF_INET, SOCK_STREAM, 0);
@@ -348,6 +384,7 @@ int main(void)
     adr.sin_port = PORT;
     adr.sin_addr.s_addr = INADDR_ANY;
     memset(adr.sin_zero, 0, sizeof(adr.sin_zero));
+    memset(bufor, 0, 1024);
     
     if (bind(gn_nasluch, (struct sockaddr*) &adr, dladr) < 0)
     {
@@ -363,6 +400,7 @@ int main(void)
     while(1)
     {
         pmystruct user= getpstruct();
+        int n;
         dladr = sizeof(struct sockaddr_in);
         user->nr = accept(gn_nasluch, (struct sockaddr*) &adr, &dladr);
         time_t rawtime;
@@ -377,28 +415,33 @@ int main(void)
         file = fopen("log.txt","a+"); 
         fprintf(file,"S: polaczenie od %s:%u Czas: %s", inet_ntoa(adr.sin_addr), ntohs(adr.sin_port), ctime(&rawtime));
         fclose(file);
-        printf("S: tworze proces potomny\n");
 
         if (fork() == 0)
         {
             /* proces potomny */
             strcpy(user->licznik,"a000");
             strcpy(user->state,"nonauth");
-            printf("S: zaczynam obsluge\n");
             Greeting(user);
-            while(1) {
-                memset(bufor, 0, 1024);
-                recv(user->nr, bufor, 1024, 0);
-                printf("C%d: %s %s", user->nr, user->licznik, bufor);
-                CommandParser(user, bufor);
-                Licznik(user->licznik);
+            while(1){
+                do {   
+                    n=recvtimeout(user->nr, bufor, 1024, 15);
+                    if (n == -1) {
+                        perror("recvtimeout");
+                    }
+                    else if (n == -2) {
+                        Timeout(user);
+                    } else {
+                        printf("C%d: %s %s", user->nr, user->licznik, bufor);
+                        CommandParser(user, bufor);
+                        Licznik(user->licznik);
+                    } 
+                } while (n>0);
             }
             
         }
         else
         {
             /* proces macierzysty */
-            printf("S: wracam do nasluchu\n");
             continue;
         }
     }  

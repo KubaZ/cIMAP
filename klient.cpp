@@ -22,16 +22,13 @@ int main(void)
     long dl_pliku, odebrano, odebrano_razem, wiadomosc;
     socklen_t dl = sizeof(struct sockaddr_in);
     
-/*    printf("Nazwa hosta / adres IP: ");
-    scanf("%s", nazwa);*/
     h = gethostbyname(nazwa);
     if (h == NULL)
     {
         printf("Nieznany host\n");
         return 1;
     }
-/*    printf("Numer portu: ");
-    scanf("%d", &port);*/
+
     adr.sin_family = AF_INET;
     adr.sin_port = htons(port);
     adr.sin_addr.s_addr = IP(h);

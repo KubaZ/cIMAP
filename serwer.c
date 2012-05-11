@@ -9,22 +9,41 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <fstream>
+#include <signal.h>
 
 #define PORT htons(21212)
 #define BUFSIZE 1024
 
 typedef void (*FunctionWithOneParameter) (struct klient *gn);
-typedef struct functionMETA {
+typedef void (*FunctionWithTwoParameter) (struct klient *gn, char *arg1);
+typedef void (*FunctionWithThreeParameter) (struct klient *gn, char *arg1, char *arg2);
+
+/*Struktura zawierająca wskaźniki do funkcji z jednym argumentem i ich nazwy*/
+typedef struct functionOneMETA {
     FunctionWithOneParameter funcPtr;
-    char *funcName;
-} functionMETA;
+    char funcName[20];
+} functionOneMETA;
+
+typedef struct functionTwoMETA {
+    FunctionWithTwoParameter funcPtr;
+    char funcName[20];
+} functionTwoMETA;
+
+typedef struct functionThreeMETA {
+    FunctionWithThreeParameter funcPtr;
+    char funcName[20];
+} functionThreeMETA;
+/*Struktura Klienta zawierająca jego nr gniazda oraz stan*/
 struct klient {
     int nr;
     char state[10];
+    char *path;
+    char licznik[4];
 } klient;
 
 typedef struct klient * pmystruct;
 
+/*Metoda zwracająca wskaźnik do struktury Klienta*/
 pmystruct getpstruct() {
     pmystruct temp=(pmystruct)malloc(sizeof(pmystruct*)) ;
     return temp;
@@ -62,8 +81,11 @@ void Logout( pmystruct gn) {
     char message[] = "* BYE IMAP4rev1 Server logging out\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
-        printf("Logout error\n");
+        printf("Logout error\n"); 
     }
+    close(gn->nr);
+    free(gn);
+    exit(0);
 }
 
 //          Client Commands - Not Authenticated State
@@ -76,7 +98,7 @@ void Starttls( pmystruct gn) {
         printf("Starttls error\n");
     }
 }
-void Login(pmystruct gn/*, char *user, char *password*/) {
+void Login(pmystruct gn, char *user, char *password) {
 
     char message[] = "OK LOGIN completed \n";
     strcpy(gn->state,"auth");
@@ -86,7 +108,7 @@ void Login(pmystruct gn/*, char *user, char *password*/) {
     }  
 
 }
-void Authenticate( pmystruct gn/*authentication mechanism name*/) {
+void Authenticate( pmystruct gn, char *mechanism) {
     char message[] = "OK AUTHENTICATE completed \n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
@@ -96,41 +118,41 @@ void Authenticate( pmystruct gn/*authentication mechanism name*/) {
 
 //          Client Commands - Authenticated State
 
-void Select(int gn, char *mailbox_name/*mailbox name*/) {
+void Select(pmystruct gn, char *mailbox_name) {
 
 } 
-void Examine(int gn/*mailbox name*/) {
+void Examine(pmystruct gn, char *mailbox_name) {
 
 }
-void Create(int gn/*mailbox name*/) {
+void Create(pmystruct gn, char *mailbox_name) {
 
 }
-void Delete(int gn/*mailbox name*/) {
+void Delete(pmystruct gn, char *mailbox_name) {
 
 }
-void Rename(int gn/*existing mailbox name
+void Rename(pmystruct gn, char *mailbox_name/*existing mailbox name
                new mailbox name*/) {
 
 }
-void Subscribe(int gn/*mailbox name*/) {
+void Subscribe(pmystruct gn, char *mailbox_name) {
 
 }
-void Unsubscribe(int gn/*mailbox name*/) {
+void Unsubscribe(pmystruct gn, char *mailbox_name) {
 
 }
-void List(int gn/*reference name
+void List(pmystruct gn/*reference name
                mailbox name with possible wildcards*/) {
 
 }
-void Lsub(int gn/*reference name
+void Lsub(pmystruct gn/*reference name
                mailbox name with possible wildcards*/) {
 
 }
-void Status(int gn/*mailbox name
+void Status(pmystruct gn, char *mailbox_name/*mailbox name
                status data item names*/) {
 
 } 
-void Append(int gn/*mailbox name
+void Append(pmystruct gn, char *mailbox_name/*mailbox name
                OPTIONAL flag parenthesized list
                OPTIONAL date/time string
                message literal*/) {
@@ -139,46 +161,59 @@ void Append(int gn/*mailbox name
 
 //          Client Commands - Selected State
 
-void Check(int gn) {
+void Check(pmystruct gn) {
 
 } 
-void Close(int gn) {
+void Close(pmystruct gn) {
 
 }
-void Expunge(int gn) {
+void Expunge(pmystruct gn) {
 
 }
-void Search(int gn/*OPTIONAL [CHARSET] specification
+void Search(pmystruct gn/*OPTIONAL [CHARSET] specification
                searching criteria (one or more)*/) {
 
 }
-void Fetch(int gn/*sequence set
+void Fetch(pmystruct gn/*sequence set
                message data item names or macro*/) {
 
 }
-void Store(int gn/*sequence set
+void Store(pmystruct gn/*sequence set
                message data item name
                value for message data item*/) {
 
 }
-void Copy(int gn/*sequence set
+void Copy(pmystruct gn/*sequence set
                mailbox name*/) {
 
 }
-void Uid(int gn/*command name
+void Uid(pmystruct gn/*command name
                command arguments*/) {
 
 }
 
-//          Command parser
+
+/*
+Command parser
+first: extract command name;
+second: check if command exists;
+third: extract args from command and exec;
+*/
 
 void CommandParser( pmystruct gn, char *command) {
 
     int tmp=0, argcount=1, max=0, current=0;
     bool found=false;
-    char *com;
-    struct functionMETA anystate[3] = {{Capability, "Capability"}, {Noop, "Noop"} , {Logout, "Logout"}};
-    struct functionMETA nonauth[3] = {{Starttls, "Starttls"}, {Authenticate, "Authenticate"} , {Login, "Login"}};
+    char *com, *arg1, *arg2;
+    struct functionOneMETA oneFunc[] = 
+        {{Capability, "Capability"}, {Noop, "Noop"} , {Logout, "Logout"} , {Starttls, "Starttls"} , 
+        {Check, "Check"} , {Close, "Close"} , {Expunge, "Expunge"}};
+    
+    struct functionTwoMETA twoFunc[] = 
+        {{Authenticate, "Authenticate"} , {Select, "Select"}, {Examine, "Examine"}, 
+        {Create, "Create"}, {Delete, "Delete"}, {Subscribe, "Subscribe"}, {Unsubscribe, "Unsubscribe"}};
+    
+    struct functionThreeMETA threeFunc[] = { {Login, "Login"}};
     for (int i=0;i<=strlen(command);i++) {
         if (command[i] == 32) {
             argcount++;
@@ -186,18 +221,30 @@ void CommandParser( pmystruct gn, char *command) {
     }
     com = strtok(command, " \n");
     
-    for (int i = 0; i<3; i++) {
-        if (strcmp(com,anystate[i].funcName)==0) {
-            anystate[i].funcPtr(gn);
-            found=true;
+    if (argcount==1) {
+        for (int i = 0; i<sizeof(oneFunc); i++) {
+            if (strcmp(com,oneFunc[i].funcName)==0) {
+                oneFunc[i].funcPtr(gn);
+                found=true;
+            }
         }
-        if (strcmp(com,nonauth[i].funcName)==0) {
-            nonauth[i].funcPtr(gn);
-            found=true;
+    } else if (argcount==2) {
+        for (int i = 0; i<sizeof(twoFunc); i++) {
+            if (strcmp(com,twoFunc[i].funcName)==0) {
+                twoFunc[i].funcPtr(gn, arg1);
+                found=true;
+            }
         }
-    }
+    } else if (argcount==3) {
+        for (int i = 0; i<sizeof(oneFunc); i++) {
+            if (strcmp(com,threeFunc[i].funcName)==0) {
+                threeFunc[i].funcPtr(gn, arg1, arg2);
+                found=true;
+            }
+        }
+    } 
     if (!found) {
-        char message[] = "command not found\n";
+        char message[] = "Command not found or wrong number of arguments\n";
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("command debug error\n");
@@ -220,7 +267,7 @@ void Licznik(char *licznik) {
     }
 }
 
-void ObsluzPolaczenie(int gn)
+/*void ObsluzPolaczenie(pmystruct gn)
 {
     char sciezka[512];
     long dl_pliku, wyslano, wyslano_razem, przeczytano;
@@ -229,7 +276,7 @@ void ObsluzPolaczenie(int gn)
     char bufor[BUFSIZE];
     
     memset(sciezka, 0, 512);
-    if (recv(gn, sciezka, 512, 0) <= 0)
+    if (recv(gn->nr, sciezka, 512, 0) <= 0)
     {
         printf("Potomny: blad przy odczycie sciezki\n");
         return;
@@ -253,7 +300,7 @@ void ObsluzPolaczenie(int gn)
     
     dl_pliku = htonl((long) fileinfo.st_size);
     
-    if (send(gn, &dl_pliku, sizeof(long), 0) != sizeof(long))
+    if (send(gn->nr, &dl_pliku, sizeof(long), 0) != sizeof(long))
     {
         printf("Potomny: blad przy wysylaniu wielkosci pliku\n");
         return;
@@ -271,7 +318,7 @@ void ObsluzPolaczenie(int gn)
     while (wyslano_razem < dl_pliku)
     {
         przeczytano = fread(bufor, 1, BUFSIZE, plik);
-        wyslano = send(gn, bufor, przeczytano, 0);
+        wyslano = send(gn->nr, bufor, przeczytano, 0);
         if (przeczytano != wyslano)
             break;
         wyslano_razem += wyslano;
@@ -284,7 +331,7 @@ void ObsluzPolaczenie(int gn)
         printf("Potomny: blad przy wysylaniu pliku\n");
     fclose(plik);
     return;    
-}
+}*/
 
 
 int main(void)
@@ -335,19 +382,18 @@ int main(void)
         if (fork() == 0)
         {
             /* proces potomny */
-            char licznik[] = "a000";
+            strcpy(user->licznik,"a000");
             strcpy(user->state,"nonauth");
             printf("S: zaczynam obsluge\n");
             Greeting(user);
             while(1) {
                 memset(bufor, 0, 1024);
                 recv(user->nr, bufor, 1024, 0);
-                printf("C%d: %s %s", user->nr, licznik, bufor);
-                Licznik(licznik);
+                printf("C%d: %s %s", user->nr, user->licznik, bufor);
                 CommandParser(user, bufor);
+                Licznik(user->licznik);
             }
-            printf("koncze proces potomny");
-            exit(0);
+            
         }
         else
         {

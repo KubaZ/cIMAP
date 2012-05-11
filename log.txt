@@ -1,82 +1,40 @@
-S: polaczenie od 127.0.0.1:57530
-S: polaczenie od 127.0.0.1:57531
-S: polaczenie od 127.0.0.1:57532
-S: polaczenie od 127.0.0.1:57533
 S: polaczenie od 127.0.0.1:57770 Czas: Tue May  1 10:45:43 2012
-
 S: polaczenie od 127.0.0.1:57771 Czas: Tue May  1 10:45:43 2012
-
 S: polaczenie od 127.0.0.1:57784 Czas: Tue May  1 10:50:37 2012
-
-S: polaczenie od 127.0.0.1:57785 Czas: 
 S: polaczenie od 127.0.0.1:58025 Czas: Tue May  1 11:12:44 2012
-
 S: polaczenie od 127.0.0.1:58026 Czas: Tue May  1 11:13:11 2012
-
 S: polaczenie od 127.0.0.1:58027 Czas: Tue May  1 11:14:03 2012
-
 S: polaczenie od 127.0.0.1:58028 Czas: Tue May  1 11:14:30 2012
-
 S: polaczenie od 127.0.0.1:58029 Czas: Tue May  1 11:14:51 2012
-
 S: polaczenie od 127.0.0.1:58183 Czas: Tue May  1 11:35:50 2012
-
 S: polaczenie od 127.0.0.1:58194 Czas: Tue May  1 11:48:24 2012
-
 S: polaczenie od 127.0.0.1:58195 Czas: Tue May  1 11:49:07 2012
-
 S: polaczenie od 127.0.0.1:58196 Czas: Tue May  1 11:51:26 2012
-
 S: polaczenie od 127.0.0.1:58198 Czas: Tue May  1 11:52:28 2012
-
 S: polaczenie od 127.0.0.1:58199 Czas: Tue May  1 11:53:20 2012
-
 S: polaczenie od 127.0.0.1:58200 Czas: Tue May  1 11:53:53 2012
-
 S: polaczenie od 127.0.0.1:58201 Czas: Tue May  1 11:54:32 2012
-
 S: polaczenie od 127.0.0.1:58203 Czas: Tue May  1 11:55:35 2012
-
 S: polaczenie od 127.0.0.1:58204 Czas: Tue May  1 11:56:15 2012
-
 S: polaczenie od 127.0.0.1:58205 Czas: Tue May  1 11:57:30 2012
-
 S: polaczenie od 127.0.0.1:58208 Czas: Tue May  1 11:59:06 2012
-
 S: polaczenie od 127.0.0.1:58209 Czas: Tue May  1 12:00:26 2012
-
 S: polaczenie od 127.0.0.1:58210 Czas: Tue May  1 12:01:00 2012
-
 S: polaczenie od 127.0.0.1:58218 Czas: Tue May  1 12:02:14 2012
-
 S: polaczenie od 127.0.0.1:58219 Czas: Tue May  1 12:03:46 2012
-
 S: polaczenie od 127.0.0.1:58220 Czas: Tue May  1 12:04:54 2012
-
 S: polaczenie od 127.0.0.1:58221 Czas: Tue May  1 12:14:53 2012
-
 S: polaczenie od 127.0.0.1:58222 Czas: Tue May  1 12:15:38 2012
-
 S: polaczenie od 127.0.0.1:58223 Czas: Tue May  1 12:16:02 2012
-
 S: polaczenie od 127.0.0.1:58224 Czas: Tue May  1 12:16:49 2012
-
 S: polaczenie od 127.0.0.1:58225 Czas: Tue May  1 12:17:52 2012
-
 S: polaczenie od 127.0.0.1:58226 Czas: Tue May  1 12:18:50 2012
-
 S: polaczenie od 127.0.0.1:58227 Czas: Tue May  1 12:23:15 2012
-
 S: polaczenie od 127.0.0.1:58228 Czas: Tue May  1 12:25:28 2012
-
 S: polaczenie od 127.0.0.1:58229 Czas: Tue May  1 12:26:16 2012
-
 S: polaczenie od 127.0.0.1:58230 Czas: Tue May  1 12:28:26 2012
-
 S: polaczenie od 127.0.0.1:58231 Czas: Tue May  1 12:29:18 2012
-
 S: polaczenie od 127.0.0.1:58232 Czas: Tue May  1 12:29:25 2012
-
 S: polaczenie od 127.0.0.1:58242 Czas: Tue May  1 12:31:28 2012
 S: polaczenie od 127.0.0.1:58243 Czas: Tue May  1 12:32:10 2012
 S: polaczenie od 127.0.0.1:58244 Czas: Tue May  1 12:33:05 2012
@@ -155,3 +113,19 @@ S: polaczenie od 127.0.0.1:50364 Czas: Fri May 11 11:56:59 2012
 S: polaczenie od 127.0.0.1:50634 Czas: Fri May 11 12:02:48 2012
 S: polaczenie od 127.0.0.1:50650 Czas: Fri May 11 12:17:00 2012
 S: polaczenie od 127.0.0.1:50651 Czas: Fri May 11 12:17:38 2012
+S: polaczenie od 127.0.0.1:50716 Czas: Fri May 11 13:08:09 2012
+S: polaczenie od 127.0.0.1:50720 Czas: Fri May 11 13:10:27 2012
+S: polaczenie od 127.0.0.1:50724 Czas: Fri May 11 13:12:26 2012
+S: polaczenie od 127.0.0.1:50725 Czas: Fri May 11 13:12:34 2012
+S: polaczenie od 127.0.0.1:50727 Czas: Fri May 11 13:13:21 2012
+S: polaczenie od 127.0.0.1:50729 Czas: Fri May 11 13:14:06 2012
+S: polaczenie od 127.0.0.1:50834 Czas: Fri May 11 13:55:00 2012
+S: polaczenie od 127.0.0.1:51129 Czas: Fri May 11 14:05:39 2012
+S: polaczenie od 127.0.0.1:51137 Czas: Fri May 11 14:06:25 2012
+S: polaczenie od 127.0.0.1:51143 Czas: Fri May 11 14:10:35 2012
+S: polaczenie od 127.0.0.1:51145 Czas: Fri May 11 14:12:07 2012
+S: polaczenie od 127.0.0.1:51146 Czas: Fri May 11 14:12:24 2012
+S: polaczenie od 127.0.0.1:51149 Czas: Fri May 11 14:14:17 2012
+S: polaczenie od 127.0.0.1:51184 Czas: Fri May 11 14:58:56 2012
+S: polaczenie od 127.0.0.1:51185 Czas: Fri May 11 14:59:06 2012
+S: polaczenie od 127.0.0.1:51186 Czas: Fri May 11 14:59:09 2012

@@ -10,7 +10,7 @@
 #include <sys/time.h>
 #include <fstream>
 
-using namespace std;
+
 
 #define PORT htons(21212)
 #define BUFSIZE 1024
@@ -205,11 +205,15 @@ third: extract args from command and exec;
 */
 char *extractArgument(char *text, int b, int e) {
     char *arg;
+    //printf("%s\n", text);
     int i=0;
-    for (b+1;b<e;b++) {
+    /*for (b;b<e;b++) {
         arg[i]=text[b];
         i++;
     }
+    arg[i]='\0';*/
+    arg = strtok(text, " \n\0");
+    //printf("%s\n", arg);
     return arg;
 }
 
@@ -219,7 +223,9 @@ void CommandParser( pmystruct gn, char *command) {
     int tmp=0, argcount=1, max=0, current=0;
     int argp[6];
     bool found=false;
-    char *com, *arg1, *arg2;
+    char *arg1, *arg2;
+    int ml=strlen(command);
+
     struct functionOneMETA oneFunc[] = 
         {{Capability, "Capability"}, {Noop, "Noop"} , {Logout, "Logout"} , {Starttls, "Starttls"} , 
         {Check, "Check"} , {Close, "Close"} , {Expunge, "Expunge"}};
@@ -229,15 +235,16 @@ void CommandParser( pmystruct gn, char *command) {
         {Create, "Create"}, {Delete, "Delete"}, {Subscribe, "Subscribe"}, {Unsubscribe, "Unsubscribe"}};
     
     struct functionThreeMETA threeFunc[] = { {Login, "Login"}};
-    for (int i=0;i<=strlen(command);i++) {
-        if (command[i] == 32) {
+
+    for (int i=0;i<=ml;i++) {
+        if (command[i] == 32 || command[i]=='\n') {
             argcount++;
             argp[current]=i;
             current++;
         }
     }
-    printf("Ilosc spacji %d\n", current);
-    com = strtok(command, " \n");
+
+    char *com = extractArgument(command, 0, argp[0]);
     
     if (argcount==1) {
         for (int i = 0; i<sizeof(oneFunc); i++) {
@@ -249,7 +256,7 @@ void CommandParser( pmystruct gn, char *command) {
     } else if (argcount==2) {
         for (int i = 0; i<sizeof(twoFunc); i++) {
             if (strcmp(com,twoFunc[i].funcName)==0) {
-                arg1 = extractArgument(command, argp[0],argp[1]);
+                arg1 = extractArgument(command, argp[0],ml);
                 twoFunc[i].funcPtr(gn, arg1);
                 found=true;
             }
@@ -258,8 +265,7 @@ void CommandParser( pmystruct gn, char *command) {
         for (int i = 0; i<sizeof(oneFunc); i++) {
             if (strcmp(com,threeFunc[i].funcName)==0) {
                 arg1 = extractArgument(command, argp[0],argp[1]);
-                arg2 = extractArgument(command, argp[0],argp[1]);
-                printf("%s\n%s\n", arg1, arg2);
+                arg2 = extractArgument(command, argp[1],ml);
                 threeFunc[i].funcPtr(gn, arg1, arg2);
                 found=true;
             }
@@ -377,19 +383,17 @@ int main(void)
             strcpy(user->state,"nonauth");
             Greeting(user);
             while(1){
-                do {   
-                    n=recvtimeout(user->nr, bufor, 1024, 15);
-                    if (n == -1) {
-                        perror("recvtimeout");
-                    }
-                    else if (n == -2) {
-                        Timeout(user);
-                    } else {
-                        printf("C%d: %s %s", user->nr, user->licznik, bufor);
-                        CommandParser(user, bufor);
-                        Licznik(user->licznik);
-                    } 
-                } while (n>0);
+                n=recvtimeout(user->nr, bufor, 1024, 15);
+                if (n == -1) {
+                    perror("recvtimeout");
+                }
+                else if (n == -2) {
+                    Timeout(user);
+                } else {
+                    printf("C%d: %s %s", user->nr, user->licznik, bufor);
+                    CommandParser(user, bufor);
+                    Licznik(user->licznik);
+                }  
             }
             
         }

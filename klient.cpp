@@ -21,7 +21,7 @@ int main(void)
     char sciezka[512];
     long dl_pliku, odebrano, odebrano_razem, wiadomosc;
     socklen_t dl = sizeof(struct sockaddr_in);
-    memset(bufor, 0, 1024);
+    
     
     h = gethostbyname(nazwa);
     if (h == NULL)
@@ -47,7 +47,7 @@ int main(void)
     }
     printf("Polaczenie nawiazane\n");
     while(1) {
-        
+        memset(bufor, 0, 1024);
         recv(gn, bufor, 1024, 0);
         printf("S: %s\n", bufor);
         printf("Podaj wiadomosc: \n");

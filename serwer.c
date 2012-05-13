@@ -43,8 +43,9 @@ licznik poleceń oraz aktualnie wybrany folder.
 struct klient {
     int nr;
     char state[4];
-    char *mailbox;
+    char user[20];
     char licznik[4];
+    char mailbox[20];
 } klient;
 
 typedef struct klient * pmystruct;
@@ -87,11 +88,16 @@ void wrongState(pmystruct gn) {
 
 void Capability(pmystruct gn) {
 
-    char message[] = "OK CAPABILITY completed \n";
+    char message[] = "* CAPABILITY IMAP4rev1 AUTH=PLAIN\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
-        printf("CAPABILITY error\n");
+        printf("CAPABILITY untaged error\n");
     } else {
+        strcpy(message, "OK CAPABILITY completed\n");
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("CAPABILITY taged error\n");
+        }
         printf("S: %s %s", gn->licznik, message);
     }
 }
@@ -113,7 +119,7 @@ void Logout(pmystruct gn) {
         printf("Logout error\n"); 
     } else {
         strcpy(gn->state, "log");
-        message[] = "OK LOGOUT Completed\n";
+        strcpy(message, "OK LOGOUT Completed\n");
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("Logout error\n"); 
@@ -122,9 +128,6 @@ void Logout(pmystruct gn) {
             printf("S: %s %s", gn->licznik, message);
         }
     }
-    free(gn);
-    printf()
-    exit(0);
 }
 
 //          Client Commands - Not Authenticated State
@@ -144,6 +147,7 @@ void Login(pmystruct gn, char *user, char *password) {
 
     char message[] = "OK LOGIN completed \n";
     strcpy(gn->state,"aut");
+    //strcpy(gn->user, user);
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Login error\n");
@@ -166,15 +170,23 @@ void Authenticate(pmystruct gn, char *mechanism) {
 
 void Select(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
+    char message[] = "OK [READ-WRITE] SELECT completed\n";
+    
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
         strcpy(gn->state, "sel");
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("SELECT error\n");
+        } else {
+            printf("S: %s %s", gn->licznik, message);
+        } 
     }
     
 } 
 void Examine(pmystruct gn, char *mailbox_name) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -182,7 +194,7 @@ void Examine(pmystruct gn, char *mailbox_name) {
     }
 }
 void Create(pmystruct gn, char *mailbox_name) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -190,7 +202,7 @@ void Create(pmystruct gn, char *mailbox_name) {
     }
 }
 void Delete(pmystruct gn, char *mailbox_name) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -198,7 +210,7 @@ void Delete(pmystruct gn, char *mailbox_name) {
     }
 }
 void Rename(pmystruct gn, char *mailbox_name, char *new_mailbox_name) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -206,7 +218,7 @@ void Rename(pmystruct gn, char *mailbox_name, char *new_mailbox_name) {
     }
 }
 void Subscribe(pmystruct gn, char *mailbox_name) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (!checkState(gn, state)) {
         wrongState(gn);
     } else {
@@ -214,7 +226,7 @@ void Subscribe(pmystruct gn, char *mailbox_name) {
     }
 }
 void Unsubscribe(pmystruct gn, char *mailbox_name) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -223,7 +235,7 @@ void Unsubscribe(pmystruct gn, char *mailbox_name) {
 }
 void List(pmystruct gn/*reference name
                mailbox name with possible wildcards*/) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -232,7 +244,7 @@ void List(pmystruct gn/*reference name
 }
 void Lsub(pmystruct gn/*reference name
                mailbox name with possible wildcards*/) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -241,7 +253,7 @@ void Lsub(pmystruct gn/*reference name
 }
 void Status(pmystruct gn, char *mailbox_name/*mailbox name
                status data item names*/) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -252,7 +264,7 @@ void Append(pmystruct gn, char *mailbox_name/*mailbox name
                OPTIONAL flag parenthesized list
                OPTIONAL date/time string
                message literal*/) {
-    char state[] = "aut";
+    char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
@@ -439,7 +451,7 @@ int main(void)
     adr.sin_port = PORT;
     adr.sin_addr.s_addr = INADDR_ANY;
     memset(adr.sin_zero, 0, sizeof(adr.sin_zero));
-    memset(bufor, 0, 1024);
+    
     
     if (bind(gn_nasluch, (struct sockaddr*) &adr, dladr) < 0)
     {
@@ -477,7 +489,8 @@ int main(void)
             strcpy(user->state,"non");
             Greeting(user);
             while(1){
-                n=recvtimeout(user->nr, bufor, 1024, 15);
+                memset(bufor, 0, BUFSIZE);
+                n=recvtimeout(user->nr, bufor, BUFSIZE, 15);
                 if (n == -1) {
                     perror("recvtimeout");
                 }
@@ -487,7 +500,11 @@ int main(void)
                     printf("C%d: %s %s", user->nr, user->licznik, bufor);
                     CommandParser(user, bufor);
                     Licznik(user->licznik);
-                }  
+                }
+                if (strcmp(user->state, "log")==0) {
+                    free(user);
+                    break;
+                }
             }
         }
         else

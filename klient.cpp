@@ -12,13 +12,14 @@
 
 int main(void)
 {
-    int gn;
+    int gn,n;
     struct sockaddr_in adr;
     int port = 21212;
     struct hostent *h;
     char nazwa[512] = "localhost";
     char bufor[1024];
     char sciezka[512];
+    char *fullmessage;
     long dl_pliku, odebrano, odebrano_razem, wiadomosc;
     socklen_t dl = sizeof(struct sockaddr_in);
     

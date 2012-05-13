@@ -15,7 +15,7 @@
 #define PORT htons(21212)
 #define BUFSIZE 2048
 
-/**/
+/*Definicje wskaźników do funkcji z różną ilością argumentów*/
 typedef void (*FunctionWithOneParameter) (struct klient *gn);
 typedef void (*FunctionWithTwoParameter) (struct klient *gn, char *arg1);
 typedef void (*FunctionWithThreeParameter) (struct klient *gn, char *arg1, char *arg2);
@@ -36,17 +36,20 @@ typedef struct functionThreeMETA {
     char funcName[20];
 } functionThreeMETA;
 
-/*Struktura Klienta zawierająca jego nr gniazda oraz stan*/
+/*
+Struktura Klienta zawierająca jego nr deskryptora, stan, 
+licznik poleceń oraz aktualnie wybrany folder.
+*/
 struct klient {
     int nr;
     char state[4];
-    char *path;
+    char *mailbox;
     char licznik[4];
 } klient;
 
 typedef struct klient * pmystruct;
 
-/*Metoda zwracająca wskaźnik do struktury Klienta*/
+/* Funkcja zwracająca wskaźnik do nowo utworzonej struktury Klienta */
 pmystruct getpstruct() {
     pmystruct temp=(pmystruct)malloc(sizeof(pmystruct*)) ;
     return temp;
@@ -63,12 +66,14 @@ void Greeting( pmystruct gn) {
     }
 }
 
+/* Funkcja sprawdzająca aktualny stan klienta */
 bool checkState(pmystruct gn, char *state) {
     if (strcmp(gn->state, state) == 0 ) {
         return true;
     }
     return false;
 }
+
 
 void wrongState(pmystruct gn) {
     char message[] = "wrong user state";
@@ -80,7 +85,7 @@ void wrongState(pmystruct gn) {
 
 //          Client Commands - Any State
 
-void Capability( pmystruct gn) {
+void Capability(pmystruct gn) {
 
     char message[] = "OK CAPABILITY completed \n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
@@ -90,7 +95,7 @@ void Capability( pmystruct gn) {
         printf("S: %s %s", gn->licznik, message);
     }
 }
-void Noop( pmystruct gn) {
+void Noop(pmystruct gn) {
 
     char message[] = "OK NOOP completed\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
@@ -100,23 +105,31 @@ void Noop( pmystruct gn) {
         printf("S: %s %s", gn->licznik, message);
     }
 }
-void Logout( pmystruct gn) {
+void Logout(pmystruct gn) {
 
     char message[] = "* BYE IMAP4rev1 Server logging out\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Logout error\n"); 
     } else {
-        printf("S: %s %s", gn->licznik, message);
+        strcpy(gn->state, "log");
+        message[] = "OK LOGOUT Completed\n";
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("Logout error\n"); 
+        } else {
+            close(gn->nr);
+            printf("S: %s %s", gn->licznik, message);
+        }
     }
-    close(gn->nr);
     free(gn);
+    printf()
     exit(0);
 }
 
 //          Client Commands - Not Authenticated State
 
-void Starttls( pmystruct gn) {
+void Starttls(pmystruct gn) {
 
     char message[] = "OK STARTTLS completed \n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
@@ -139,7 +152,7 @@ void Login(pmystruct gn, char *user, char *password) {
     }
 
 }
-void Authenticate( pmystruct gn, char *mechanism) {
+void Authenticate(pmystruct gn, char *mechanism) {
     char message[] = "OK AUTHENTICATE completed \n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {

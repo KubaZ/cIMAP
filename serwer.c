@@ -431,11 +431,18 @@ void Timeout(pmystruct gn) {
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Timeout message error\n");
+    } else {
+        printf("S: Connection with C%d timed out\n", gn->nr);
+        strcpy(gn->state, "log");
+        strcpy(message, "OK LOGOUT Completed\n");
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("Logout error\n"); 
+        } else {
+            close(gn->nr);
+            printf("S: %s %s", gn->licznik, message);
+        }
     }
-    close(gn->nr);
-    printf("S: Connection with C%d timed out\n", gn->nr);
-    free(gn);
-    exit(0);
 }
 
 int main(void)
@@ -493,9 +500,11 @@ int main(void)
                 n=recvtimeout(user->nr, bufor, BUFSIZE, 15);
                 if (n == -1) {
                     perror("recvtimeout");
+                    break;
                 }
                 else if (n == -2) {
                     Timeout(user);
+
                 } else {
                     printf("C%d: %s %s", user->nr, user->licznik, bufor);
                     CommandParser(user, bufor);

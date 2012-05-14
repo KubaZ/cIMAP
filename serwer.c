@@ -216,6 +216,7 @@ void Select(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
     char *dir;
+    int mail_count;
     char state[] = "aut";
     char message[] = "OK [READ-WRITE] SELECT completed";
     message[strlen(message)] = '\0';
@@ -238,6 +239,8 @@ void Select(pmystruct gn, char *mailbox_name) {
             while((DirEntry=readdir(folder))!=NULL)
             {
                 //printf("%s\n", "w pętli");
+                if(DirEntry->d_name[0] == '.') continue;
+                mail_count++;
                 printf("Found mail: %s\n", DirEntry->d_name);
                 /*char message[] = "OK AUTHENTICATE completed";
                 message[strlen(message)] = '\0';
@@ -249,7 +252,18 @@ void Select(pmystruct gn, char *mailbox_name) {
                 }*/
             }
             closedir(folder);
+            char message[100];
+            strcpy(message, " * ");
+            strcat(message, mail_count);
+            strcat(message, " EXISTS\n"); 
+            if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+            {
+                printf("SELECT error\n");
+            } else {
+                printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+            } 
         }
+
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("SELECT error\n");

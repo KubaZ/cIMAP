@@ -171,3 +171,6 @@ S: polaczenie od 127.0.0.1:51152 Czas: Mon May 14 18:04:00 2012
 S: polaczenie od 127.0.0.1:51153 Czas: Mon May 14 18:05:33 2012
 S: polaczenie od 127.0.0.1:51154 Czas: Mon May 14 18:07:18 2012
 S: polaczenie od 127.0.0.1:51155 Czas: Mon May 14 18:08:43 2012
+S: polaczenie od 127.0.0.1:51157 Czas: Mon May 14 18:11:43 2012
+S: polaczenie od 127.0.0.1:51572 Czas: Mon May 14 18:35:05 2012
+S: polaczenie od 127.0.0.1:51573 Czas: Mon May 14 18:36:04 2012

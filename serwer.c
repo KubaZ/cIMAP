@@ -10,8 +10,6 @@
 #include <sys/time.h>
 #include <fstream>
 
-
-
 #define PORT htons(21212)
 #define BUFSIZE 2048
 
@@ -57,7 +55,6 @@ pmystruct getpstruct() {
 }
 
 void Greeting( pmystruct gn) {
-
     char message[] = "* OK IMAP4rev1 Service Ready\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
@@ -87,7 +84,6 @@ void wrongState(pmystruct gn) {
 //          Client Commands - Any State
 
 void Capability(pmystruct gn) {
-
     char message[] = "* CAPABILITY IMAP4rev1 AUTH=PLAIN\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
@@ -102,7 +98,6 @@ void Capability(pmystruct gn) {
     }
 }
 void Noop(pmystruct gn) {
-
     char message[] = "OK NOOP completed\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
@@ -112,7 +107,6 @@ void Noop(pmystruct gn) {
     }
 }
 void Logout(pmystruct gn) {
-
     char message[] = "* BYE IMAP4rev1 Server logging out\n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
@@ -133,7 +127,6 @@ void Logout(pmystruct gn) {
 //          Client Commands - Not Authenticated State
 
 void Starttls(pmystruct gn) {
-
     char message[] = "OK STARTTLS completed \n";
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
@@ -144,9 +137,9 @@ void Starttls(pmystruct gn) {
 }
 
 void Login(pmystruct gn, char *user, char *password) {
-
     char message[] = "OK LOGIN completed \n";
     strcpy(gn->state,"aut");
+    printf("user: %s  password: %s\n", user, password);
     //strcpy(gn->user, user);
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
@@ -162,7 +155,7 @@ void Authenticate(pmystruct gn, char *mechanism) {
     {
         printf("Authenticate error\n");
     } else {
-        printf("S: %s %s", gn->licznik, message);
+        printf("S: %s %s %s", gn->licznik, mechanism, message);
     }   
 }
 
@@ -251,8 +244,7 @@ void Lsub(pmystruct gn/*reference name
 
     }
 }
-void Status(pmystruct gn, char *mailbox_name/*mailbox name
-               status data item names*/) {
+void Status(pmystruct gn, char *mailbox_name) {
     char state[] = "sel";
     if (checkState(gn, state)==false) {
         wrongState(gn);
@@ -275,49 +267,90 @@ void Append(pmystruct gn, char *mailbox_name/*mailbox name
 //          Client Commands - Selected State
 
 void Check(pmystruct gn) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
 
+    }
 } 
 void Close(pmystruct gn) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
 
+    }
 }
 void Expunge(pmystruct gn) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
 
+    }
 }
 void Search(pmystruct gn/*OPTIONAL [CHARSET] specification
                searching criteria (one or more)*/) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
 
+    }
 }
 void Fetch(pmystruct gn/*sequence set
                message data item names or macro*/) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
 
+    }
 }
 void Store(pmystruct gn/*sequence set
                message data item name
                value for message data item*/) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
 
-}
-void Copy(pmystruct gn/*sequence set
-               mailbox name*/) {
-
-}
-void Uid(pmystruct gn/*command name
-               command arguments*/) {
-
-}
-
-/*char *extractArgument(char *text, int b, int e) {
-    char *arg;
-    //printf("%s\n", text);
-    int i=0;
-    for (b;b<e;b++) {
-        arg[i]=text[b];
-        i++;
     }
-    arg[i]='\0';
-    arg = strtok(text, " \n\0");
-    //printf("%s\n", arg);
-    return arg;
-}*/
+}
+void Copy(pmystruct gn, char *sequence_set, char *mailbox_name) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
+
+    }
+}
+void Uid(pmystruct gn, char *command_name, char *command_arguments) {
+    char state[] = "sel";
+    if (checkState(gn, state)==false) {
+        wrongState(gn);
+    } else {
+
+    }
+}
+
+char *extractArgument(char *text, int argc) {
+    char *arg;
+    char copy[strlen(text)];
+    strcpy(copy, text);
+    int i=1;
+    arg = strtok(copy, " \n\0");
+    if (argc>=2) {
+        while (i<argc) {
+            arg = strtok(NULL, " \n\0");
+            i++;
+        }
+        return arg;
+    } else {
+        return arg;
+    }
+}
 
 /*
 Command parser
@@ -330,8 +363,7 @@ void CommandParser( pmystruct gn, char *command) {
     int tmp=0, argcount=1, max=0, current=0;
     int argp[6];
     bool found=false;
-    char *arg1, *arg2;
-    int ml=strlen(command);
+    int ml = strlen(command);
 
     struct functionOneMETA oneFunc[] = 
         {{Capability, "CAPABILITY"}, {Noop, "NOOP"} , {Logout, "LOGOUT"} , {Starttls, "STARTTLS"} , 
@@ -341,46 +373,57 @@ void CommandParser( pmystruct gn, char *command) {
         {{Authenticate, "AUTHENTICATE"} , {Select, "SELECT"}, {Examine, "EXAMINE"}, 
         {Create, "CREATE"}, {Delete, "DELETE"}, {Subscribe, "SUBSCRIBE"}, {Unsubscribe, "UNSUBSCRIBE"}};
     
-    struct functionThreeMETA threeFunc[] = { {Login, "LOGIN"}, {Rename, "RENAME"}};
+    struct functionThreeMETA threeFunc[] = { {Login, "LOGIN"}, {Rename, "RENAME"}, {Copy, "COPY"}, 
+        {Uid, "UID"}};
 
     for (int i=0;i<=ml;i++) {
-        if (command[i] == 32) {
+        if (command[i] == 32 ) {
             argcount++;
             argp[current]=i;
             current++;
         }
     }
 
-    char *com = strtok(command, " \n\0");
+    char com[20];
+    strcpy(com, extractArgument(command, 1));
     for (int i=0; i<strlen(com);i++) {
         com[i]=toupper(com[i]);
     }
     
     if (argcount==1) {
-        for (int i = 0; i<sizeof(oneFunc); i++) {
+        for (int i = 0; i<7; i++) {
             if (strcmp(com,oneFunc[i].funcName)==0) {
                 found=true;
                 oneFunc[i].funcPtr(gn);
             }
         }
     } else if (argcount==2) {
-        for (int i = 0; i<sizeof(twoFunc); i++) {
+        for (int i = 0; i<7; i++) {
             if (strcmp(com,twoFunc[i].funcName)==0) {
                 found=true;
+                int size = ml-argp[0];
+                char arg1[size];
+                strcpy(arg1,extractArgument(command, 2));
                 twoFunc[i].funcPtr(gn, arg1);
             }
         }
     } else if (argcount==3) {
-        for (int i = 0; i<sizeof(oneFunc); i++) {
+        for (int i = 0; i<3; i++) {
             if (strcmp(com,threeFunc[i].funcName)==0) {
                 found=true;
+                int size = ml-argp[0];
+                char arg1[size];
+                size = ml-argp[1];
+                char arg2[size];
+                strcpy(arg1,extractArgument(command, 2));
+                strcpy(arg2,extractArgument(command, 3));
                 threeFunc[i].funcPtr(gn, arg1, arg2);
             }
         }
     } 
     if (!found) {
         char message[] = "Command not found or wrong number of arguments\n";
-        printf("S: %s", message);
+        printf("S: %s %s", gn->licznik, message);
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("command debug error\n");
@@ -397,6 +440,11 @@ void Licznik(char *licznik) {
         licznik[3]='0';
     } else if (licznik[1]!=9) {
         licznik[1]++;
+        licznik[2]='0';
+        licznik[3]='0';
+    } else if (licznik[0]!='z'){
+        licznik[0]++;
+        licznik[1]='0';
         licznik[2]='0';
         licznik[3]='0';
     }
@@ -492,12 +540,12 @@ int main(void)
 
         if (fork() == 0)
         {
-            strcpy(user->licznik,"a000");
+            strcpy(user->licznik,"a001");
             strcpy(user->state,"non");
             Greeting(user);
             while(1){
                 memset(bufor, 0, BUFSIZE);
-                n=recvtimeout(user->nr, bufor, BUFSIZE, 15);
+                n=recvtimeout(user->nr, bufor, BUFSIZE, 1800);
                 if (n == -1) {
                     perror("recvtimeout");
                     break;

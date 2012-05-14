@@ -42,9 +42,8 @@ licznik poleceń oraz aktualnie wybrany folder.
 struct klient {
     int nr;
     char state[4];
-    char user[20];
+    char user[30];
     char licznik[5];
-    char mailbox[30];
 } klient;
 
 typedef struct klient * pmystruct;
@@ -225,22 +224,22 @@ void Select(pmystruct gn, char *mailbox_name) {
         wrongState(gn);
     } else {
         strcpy(gn->state, "sel");
-        strcpy(gn->mailbox, mailbox_name);
+        
         strcpy(dir,gn->user);
         strcat(dir, "/");
-        strcat(dir,gn->mailbox);
-        //printf("%s\n",  dir);
+        strcat(dir,mailbox_name);
+        printf("%s\n",  dir);
+        
         folder = opendir(dir);
 
         if(folder==NULL)
           printf("Blad odczytu %s katalogu\n", dir);
         else {
-            //printf("%s\n", "w else");
+            printf("%s\n", "w else");
             while((DirEntry=readdir(folder))!=NULL)
             {
                 //printf("%s\n", "w pętli");
                 if(DirEntry->d_name[0] == '.') continue;
-                mail_count++;
                 printf("Found mail: %s\n", DirEntry->d_name);
                 /*char message[] = "OK AUTHENTICATE completed";
                 message[strlen(message)] = '\0';
@@ -251,19 +250,18 @@ void Select(pmystruct gn, char *mailbox_name) {
                     printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
                 }*/
             }
-            closedir(folder);
+/*            closedir(folder);
             char message[100];
             strcpy(message, " * ");
-            strcat(message, mail_count);
+            //strcat(message, mail_count);
             strcat(message, " EXISTS\n"); 
             if (send(gn->nr, message, strlen(message), 0) != strlen(message))
             {
                 printf("SELECT error\n");
             } else {
                 printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-            } 
+            } */
         }
-
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("SELECT error\n");
@@ -271,7 +269,6 @@ void Select(pmystruct gn, char *mailbox_name) {
             printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
         } 
     }
-    
 } 
 void Examine(pmystruct gn, char *mailbox_name) {
     char state[] = "sel";
@@ -283,22 +280,64 @@ void Examine(pmystruct gn, char *mailbox_name) {
 }
 void Create(pmystruct gn, char *mailbox_name) {
     char state[] = "sel";
+    char message[] = "OK CREATE completed";
+    message[strlen(message)] = '\0';
+
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
-
+        char newdir[100];
+        strcpy(newdir, gn->user);
+        strcat(newdir, "/");
+        strcat(newdir, mailbox_name);
+        mode_t process_mask = umask(0);
+        int result_code = mkdir(newdir, S_IRWXU | S_IRWXG | S_IRWXO);
+        umask(process_mask);
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("CREATE error\n");
+        } else {
+            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+        } 
     }
 }
 void Delete(pmystruct gn, char *mailbox_name) {
     char state[] = "sel";
+    char message[] = "OK DELETE completed";
+    message[strlen(message)] = '\0';
+
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
-
+        char com[100];
+        strcpy(com, "rm -r ");
+        strcat(com, gn->user);
+        strcat(com, "/");
+        strcat(com, mailbox_name);
+        if (system(com)==0) {
+            if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+            {
+                printf("DELETE error\n");
+            } else {
+                printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+            } 
+        } else {
+            char message[] = "NO [CANNOT] no such directory";
+            message[strlen(message)] = '\0';
+            if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+            {
+                printf("DELETE error\n");
+            } else {
+                printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+            } 
+        }
     }
 }
 void Rename(pmystruct gn, char *mailbox_name, char *new_mailbox_name) {
     char state[] = "sel";
+    char message[] = "OK RENAME completed";
+    message[strlen(message)] = '\0';
+
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {

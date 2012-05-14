@@ -10,29 +10,6 @@
 
 #define IP(H) *((unsigned long*) (H)->h_addr_list[0])
 
-int recvtimeout(int s, char *buf, int len, int timeout)
-{
-    fd_set fds;
-    int n;
-    struct timeval tv;
-
-    // set up the file descriptor set
-    FD_ZERO(&fds);
-    FD_SET(s, &fds);
-
-    // set up the struct timeval for the timeout
-    tv.tv_sec = timeout;
-    tv.tv_usec = 0;
-
-    // wait until timeout or data received
-    n = select(s+1, &fds, NULL, NULL, &tv);
-    if (n == 0) return -2; // timeout!
-    if (n == -1) return -1; // error
-
-    // data must be here, so do a normal recv()
-    return recv(s, buf, len, 0);
-}
-
 int main(void)
 {
     int gn,n;
@@ -72,20 +49,21 @@ int main(void)
     printf("Polaczenie nawiazane\n");
 
     while(1) {
-        char *full;
-        strcpy(full,"");
-        while(1) {
+        /*char *full;
+        strcpy(full,"");*/
+        //while(1) {
             memset(bufor, 0, 1024);
             n=recv(gn, bufor, 1024, 0);
-            if (bufor[n-1]=='\n') {
+            /*if (bufor[n-1]=='\n') {
                 strcat(full, bufor);
                 printf("S: %s", bufor);
                 continue;
             } else
                 strcat(full, bufor);
                 printf("S: %s\n", bufor);
-                break;
-        }
+                break;*/
+       //}
+                printf("S: %s\n", bufor);
         printf("Podaj wiadomosc: ");
         fflush(stdin);      
         fgets(sciezka, 1024, stdin);

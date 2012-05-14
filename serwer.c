@@ -42,8 +42,8 @@ struct klient {
     int nr;
     char state[4];
     char user[20];
-    char licznik[4];
-    char mailbox[20];
+    char licznik[5];
+    char mailbox[30];
 } klient;
 
 typedef struct klient * pmystruct;
@@ -60,7 +60,7 @@ void Greeting( pmystruct gn) {
     {
         printf("Greeting error\n");
     } else {
-        printf("S: %s %s", gn->licznik, message);
+        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
     }
 }
 
@@ -81,6 +81,31 @@ void wrongState(pmystruct gn) {
     }
 }
 
+int Search_User(char *fname, char *str) {
+    FILE *fp;
+    int line_num = 1;
+    int find_result = 0;
+    char temp[512];
+
+    if((fp = fopen(fname, "r")) == NULL) {
+      return(-1);
+    }
+
+    while(fgets(temp, 512, fp) != NULL) {
+        if((strstr(temp, str)) != NULL && strlen(temp)-1==strlen(str)) {
+            if(fp) {
+                fclose(fp);
+            }
+            return 0;
+        }
+    }
+    //Close the file if still open.
+    if(fp) {
+        fclose(fp);
+    }
+    return 1;
+}
+
 //          Client Commands - Any State
 
 void Capability(pmystruct gn) {
@@ -94,7 +119,7 @@ void Capability(pmystruct gn) {
         {
             printf("CAPABILITY taged error\n");
         }
-        printf("S: %s %s", gn->licznik, message);
+        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
     }
 }
 void Noop(pmystruct gn) {
@@ -103,7 +128,7 @@ void Noop(pmystruct gn) {
     {
         printf("NOOP error\n");
     } else {
-        printf("S: %s %s", gn->licznik, message);
+        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
     }
 }
 void Logout(pmystruct gn) {
@@ -119,7 +144,7 @@ void Logout(pmystruct gn) {
             printf("Logout error\n"); 
         } else {
             close(gn->nr);
-            printf("S: %s %s", gn->licznik, message);
+            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
         }
     }
 }
@@ -132,22 +157,35 @@ void Starttls(pmystruct gn) {
     {
         printf("Starttls error\n");
     } else {
-        printf("S: %s %s", gn->licznik, message);
+        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
     }
 }
 
 void Login(pmystruct gn, char *user, char *password) {
     char message[] = "OK LOGIN completed \n";
     strcpy(gn->state,"aut");
-    printf("user: %s  password: %s\n", user, password);
-    //strcpy(gn->user, user);
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-    {
-        printf("Login error\n");
+    char file[] = "logins.txt";
+    char line[strlen(user)+strlen(password)+1];
+    strcpy(line, user);
+    strcat(line, " ");
+    strcat(line, password);
+    if (Search_User(file, line)==0){
+        strcpy(gn->user, user);
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("Login error\n");
+        } else {
+            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+        }
     } else {
-        printf("S: %s %s", gn->licznik, message);
+        char message[] = "NO [AUTHENTICATIONFAILED] Authentication failed \n";
+        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+        {
+            printf("Login error\n");
+        } else {
+            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+        }
     }
-
 }
 void Authenticate(pmystruct gn, char *mechanism) {
     char message[] = "OK AUTHENTICATE completed \n";
@@ -155,7 +193,7 @@ void Authenticate(pmystruct gn, char *mechanism) {
     {
         printf("Authenticate error\n");
     } else {
-        printf("S: %s %s %s", gn->licznik, mechanism, message);
+        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
     }   
 }
 
@@ -169,11 +207,12 @@ void Select(pmystruct gn, char *mailbox_name) {
         wrongState(gn);
     } else {
         strcpy(gn->state, "sel");
+        strcpy(gn->mailbox, mailbox_name);
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("SELECT error\n");
         } else {
-            printf("S: %s %s", gn->licznik, message);
+            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
         } 
     }
     
@@ -554,7 +593,7 @@ int main(void)
                     Timeout(user);
 
                 } else {
-                    printf("C%d: %s %s", user->nr, user->licznik, bufor);
+                    printf("C: C%d %s %s", user->nr, user->licznik, bufor);
                     CommandParser(user, bufor);
                     Licznik(user->licznik);
                 }

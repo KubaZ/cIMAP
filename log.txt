@@ -77,3 +77,14 @@ S: polaczenie od 127.0.0.1:65334 Czas: Mon May 14 10:49:00 2012
 S: polaczenie od 127.0.0.1:65337 Czas: Mon May 14 10:50:33 2012
 S: polaczenie od 127.0.0.1:65338 Czas: Mon May 14 10:53:16 2012
 S: polaczenie od 127.0.0.1:65340 Czas: Mon May 14 10:53:59 2012
+S: polaczenie od 127.0.0.1:51451 Czas: Mon May 14 13:20:35 2012
+S: polaczenie od 127.0.0.1:51460 Czas: Mon May 14 13:22:21 2012
+S: polaczenie od 127.0.0.1:51478 Czas: Mon May 14 13:24:13 2012
+S: polaczenie od 127.0.0.1:51480 Czas: Mon May 14 13:26:04 2012
+S: polaczenie od 127.0.0.1:51481 Czas: Mon May 14 13:28:01 2012
+S: polaczenie od 127.0.0.1:51482 Czas: Mon May 14 13:31:11 2012
+S: polaczenie od 127.0.0.1:51483 Czas: Mon May 14 13:32:02 2012
+S: polaczenie od 127.0.0.1:51541 Czas: Mon May 14 13:35:46 2012
+S: polaczenie od 127.0.0.1:51542 Czas: Mon May 14 13:36:22 2012
+S: polaczenie od 127.0.0.1:51545 Czas: Mon May 14 13:37:10 2012
+S: polaczenie od 127.0.0.1:51546 Czas: Mon May 14 13:37:40 2012

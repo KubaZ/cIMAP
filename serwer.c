@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <fstream>
+#include <dirent.h>
 
 #define PORT htons(21212)
 #define BUFSIZE 2048
@@ -55,12 +56,13 @@ pmystruct getpstruct() {
 }
 
 void Greeting( pmystruct gn) {
-    char message[] = "* OK IMAP4rev1 Service Ready\n";
+    char message[] = "* OK IMAP4rev1 Service Ready";
+    message[strlen(message)] = '\0';
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Greeting error\n");
     } else {
-        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
     }
 }
 
@@ -114,21 +116,24 @@ void Capability(pmystruct gn) {
     {
         printf("CAPABILITY untaged error\n");
     } else {
-        strcpy(message, "OK CAPABILITY completed\n");
+        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+        char message[] = "OK CAPABILITY completed";
+        message[strlen(message)] = '\0';
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("CAPABILITY taged error\n");
         }
-        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
     }
 }
 void Noop(pmystruct gn) {
-    char message[] = "OK NOOP completed\n";
+    char message[] = "OK NOOP completed";
+    message[strlen(message)] = '\0';
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("NOOP error\n");
     } else {
-        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
     }
 }
 void Logout(pmystruct gn) {
@@ -137,14 +142,16 @@ void Logout(pmystruct gn) {
     {
         printf("Logout error\n"); 
     } else {
+        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
         strcpy(gn->state, "log");
-        strcpy(message, "OK LOGOUT Completed\n");
+        char message[] = "OK LOGOUT Completed";
+        message[strlen(message)] = '\0';
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("Logout error\n"); 
         } else {
             close(gn->nr);
-            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
         }
     }
 }
@@ -152,7 +159,8 @@ void Logout(pmystruct gn) {
 //          Client Commands - Not Authenticated State
 
 void Starttls(pmystruct gn) {
-    char message[] = "OK STARTTLS completed \n";
+    char message[] = "OK STARTTLS completed";
+    message[strlen(message)] = '\0';
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Starttls error\n");
@@ -162,57 +170,90 @@ void Starttls(pmystruct gn) {
 }
 
 void Login(pmystruct gn, char *user, char *password) {
-    char message[] = "OK LOGIN completed \n";
-    strcpy(gn->state,"aut");
+    char message[] = "OK LOGIN completed";
+    message[strlen(message)] = '\0';
+    
     char file[] = "logins.txt";
     char line[strlen(user)+strlen(password)+1];
     strcpy(line, user);
     strcat(line, " ");
     strcat(line, password);
+
     if (Search_User(file, line)==0){
         strcpy(gn->user, user);
+        strcpy(gn->state,"aut");
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("Login error\n");
         } else {
-            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
         }
     } else {
-        char message[] = "NO [AUTHENTICATIONFAILED] Authentication failed \n";
+        char message[] = "NO [AUTHENTICATIONFAILED] Authentication failed";
+        message[strlen(message)] = '\0';
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("Login error\n");
         } else {
-            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
         }
     }
 }
 void Authenticate(pmystruct gn, char *mechanism) {
-    char message[] = "OK AUTHENTICATE completed \n";
+    char message[] = "OK AUTHENTICATE completed";
+    message[strlen(message)] = '\0';
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
         printf("Authenticate error\n");
     } else {
-        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
-    }   
+        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+    }
 }
 
 //          Client Commands - Authenticated State
 
 void Select(pmystruct gn, char *mailbox_name) {
+    DIR *folder;
+    struct dirent *DirEntry;
+    unsigned char isFile =0x8;
+    char *dir;
     char state[] = "aut";
-    char message[] = "OK [READ-WRITE] SELECT completed\n";
+    char message[] = "OK [READ-WRITE] SELECT completed";
+    message[strlen(message)] = '\0';
     
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
         strcpy(gn->state, "sel");
         strcpy(gn->mailbox, mailbox_name);
+        strcpy(dir,gn->user);
+        strcat(dir, "/");
+        strcat(dir,gn->mailbox);
+        if((folder = opendir(dir))==NULL)
+          printf("Blad odczytu %s katalogu\n", dir);
+        else {
+            while((DirEntry=readdir(folder))!=NULL)
+            {
+               
+                    printf("Found mail: [%s]\n", DirEntry->d_name);
+                    /*char message[] = "OK AUTHENTICATE completed";
+                    message[strlen(message)] = '\0';
+                    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+                    {
+                        printf("Authenticate error\n");
+                    } else {
+                        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+                    }*/
+                
+               
+            }
+            closedir(folder);
+        }
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("SELECT error\n");
         } else {
-            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
         } 
     }
     
@@ -461,8 +502,9 @@ void CommandParser( pmystruct gn, char *command) {
         }
     } 
     if (!found) {
-        char message[] = "Command not found or wrong number of arguments\n";
-        printf("S: %s %s", gn->licznik, message);
+        char message[] = "Command not found or wrong number of arguments";
+        message[strlen(message)] = '\0';
+        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("command debug error\n");

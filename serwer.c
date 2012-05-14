@@ -215,7 +215,6 @@ void Authenticate(pmystruct gn, char *mechanism) {
 void Select(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
-    unsigned char isFile =0x8;
     char *dir;
     char state[] = "aut";
     char message[] = "OK [READ-WRITE] SELECT completed";
@@ -229,23 +228,25 @@ void Select(pmystruct gn, char *mailbox_name) {
         strcpy(dir,gn->user);
         strcat(dir, "/");
         strcat(dir,gn->mailbox);
-        if((folder = opendir(dir))==NULL)
+        //printf("%s\n",  dir);
+        folder = opendir(dir);
+
+        if(folder==NULL)
           printf("Blad odczytu %s katalogu\n", dir);
         else {
+            //printf("%s\n", "w else");
             while((DirEntry=readdir(folder))!=NULL)
             {
-               
-                    printf("Found mail: [%s]\n", DirEntry->d_name);
-                    /*char message[] = "OK AUTHENTICATE completed";
-                    message[strlen(message)] = '\0';
-                    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-                    {
-                        printf("Authenticate error\n");
-                    } else {
-                        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-                    }*/
-                
-               
+                //printf("%s\n", "w pętli");
+                printf("Found mail: %s\n", DirEntry->d_name);
+                /*char message[] = "OK AUTHENTICATE completed";
+                message[strlen(message)] = '\0';
+                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+                {
+                    printf("Authenticate error\n");
+                } else {
+                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+                }*/
             }
             closedir(folder);
         }

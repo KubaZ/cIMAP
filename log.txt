@@ -160,3 +160,14 @@ S: polaczenie od 127.0.0.1:51135 Czas: Mon May 14 17:33:14 2012
 S: polaczenie od 127.0.0.1:51136 Czas: Mon May 14 17:42:46 2012
 S: polaczenie od 127.0.0.1:51142 Czas: Mon May 14 17:48:41 2012
 S: polaczenie od 127.0.0.1:51143 Czas: Mon May 14 17:49:00 2012
+S: polaczenie od 127.0.0.1:51145 Czas: Mon May 14 17:53:20 2012
+S: polaczenie od 127.0.0.1:51146 Czas: Mon May 14 17:56:35 2012
+S: polaczenie od 127.0.0.1:51147 Czas: Mon May 14 17:59:50 2012
+S: polaczenie od 127.0.0.1:51148 Czas: Mon May 14 18:00:39 2012
+S: polaczenie od 127.0.0.1:51149 Czas: Mon May 14 18:01:53 2012
+S: polaczenie od 127.0.0.1:51150 Czas: Mon May 14 18:02:31 2012
+S: polaczenie od 127.0.0.1:51151 Czas: Mon May 14 18:03:10 2012
+S: polaczenie od 127.0.0.1:51152 Czas: Mon May 14 18:04:00 2012
+S: polaczenie od 127.0.0.1:51153 Czas: Mon May 14 18:05:33 2012
+S: polaczenie od 127.0.0.1:51154 Czas: Mon May 14 18:07:18 2012
+S: polaczenie od 127.0.0.1:51155 Czas: Mon May 14 18:08:43 2012

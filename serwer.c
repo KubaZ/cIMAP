@@ -10,6 +10,7 @@
 #include <sys/time.h>
 #include <fstream>
 #include <dirent.h>
+#include <openssl/md5.h>
 
 #define PORT htons(21212)
 #define BUFSIZE 2048
@@ -54,19 +55,27 @@ pmystruct getpstruct() {
     return temp;
 }
 
-void Greeting( pmystruct gn) {
-    char message[] = "* OK IMAP4rev1 Service Ready";
-    message[strlen(message)] = '\0';
+void SendMessage(pmystruct gn, char message[], char type[]) {
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
-        printf("Greeting error\n");
+        printf("Send message error\n");
     } else {
-        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+        if (strcmp(type, "untagged")==0)
+            printf("S: C%d %s %s", gn->nr, gn->licznik, message);
+        else 
+            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
     }
 }
 
+void Greeting(pmystruct gn) {
+    char message[] = "* OK IMAP4rev1 Service Ready";
+    message[strlen(message)] = '\0';
+    char tag[] = "tagged";
+    SendMessage(gn, message, tag);
+}
+
 /* Funkcja sprawdzająca aktualny stan klienta */
-bool checkState(pmystruct gn, char *state) {
+bool CheckState(pmystruct gn, char *state) {
     if (strcmp(gn->state, state) == 0 ) {
         return true;
     }
@@ -74,12 +83,11 @@ bool checkState(pmystruct gn, char *state) {
 }
 
 
-void wrongState(pmystruct gn) {
+void WrongState(pmystruct gn) {
     char message[] = "wrong user state";
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-    {
-        printf("wrong state indicate error\n");
-    }
+    message[strlen(message)] = '\0';
+    char tag[] = "tagged";
+    SendMessage(gn, message, tag);
 }
 
 int Search_User(char *fname, char *str) {
@@ -110,49 +118,29 @@ int Search_User(char *fname, char *str) {
 //          Client Commands - Any State
 
 void Capability(pmystruct gn) {
+    char tag[] = "untagged";
     char message[] = "* CAPABILITY IMAP4rev1 AUTH=PLAIN\n";
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-    {
-        printf("CAPABILITY untaged error\n");
-    } else {
-        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
-        char message[] = "OK CAPABILITY completed";
-        message[strlen(message)] = '\0';
-        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-        {
-            printf("CAPABILITY taged error\n");
-        }
-        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-    }
+    SendMessage(gn, message, tag);
+    strcpy(tag, "tagged");
+    strcpy(message,"OK CAPABILITY completed");
+    message[strlen(message)] = '\0';
+    SendMessage(gn, message, tag);
 }
 void Noop(pmystruct gn) {
     char message[] = "OK NOOP completed";
     message[strlen(message)] = '\0';
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-    {
-        printf("NOOP error\n");
-    } else {
-        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-    }
+    char tag[] = "tagged";
+    SendMessage(gn, message, tag);
 }
 void Logout(pmystruct gn) {
     char message[] = "* BYE IMAP4rev1 Server logging out\n";
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-    {
-        printf("Logout error\n"); 
-    } else {
-        printf("S: C%d %s %s", gn->nr, gn->licznik, message);
-        strcpy(gn->state, "log");
-        char message[] = "OK LOGOUT Completed";
-        message[strlen(message)] = '\0';
-        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-        {
-            printf("Logout error\n"); 
-        } else {
-            close(gn->nr);
-            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-        }
-    }
+    char tag[] = "untagged";
+    SendMessage(gn, message, tag);
+    strcpy(gn->state, "log");
+    strcpy(message, "OK LOGOUT Completed");
+    message[strlen(message)] = '\0';
+    strcpy(tag, "tagged");
+    SendMessage(gn, message, tag);
 }
 
 //          Client Commands - Not Authenticated State
@@ -160,51 +148,40 @@ void Logout(pmystruct gn) {
 void Starttls(pmystruct gn) {
     char message[] = "OK STARTTLS completed";
     message[strlen(message)] = '\0';
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-    {
-        printf("Starttls error\n");
-    } else {
-        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-    }
+    char tag[] = "tagged";
+    SendMessage(gn, message, tag);
 }
 
 void Login(pmystruct gn, char *user, char *password) {
     char message[] = "OK LOGIN completed";
     message[strlen(message)] = '\0';
-    
-    char file[] = "logins.txt";
-    char line[60];
-    sprintf(line, "%s %s", user, password);
+    char tag[] = "tagged";
+    char state[] = "non";
+    if (CheckState(gn, state)==true) {
+        char file[] = "logins.txt";
+        char line[60];
+        sprintf(line, "%s %s", user, password);
 
-    if (Search_User(file, line)==0){
-        strcpy(gn->user, user);
-        strcpy(gn->state,"aut");
-        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-        {
-            printf("Login error\n");
+        if (Search_User(file, line)==0){
+            strcpy(gn->user, user);
+            strcpy(gn->state, "aut");
+            SendMessage(gn, message, tag);
         } else {
-            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-        }
-    } else {
-        char message[] = "NO [AUTHENTICATIONFAILED] Authentication failed";
-        message[strlen(message)] = '\0';
-        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-        {
-            printf("Login error\n");
-        } else {
-            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+            strcpy(message, "NO [AUTHENTICATIONFAILED] Authentication failed");
+            message[strlen(message)] = '\0';
+            SendMessage(gn, message, tag);
         }
     }
+    else {
+        WrongState(gn);
+    }
+    
 }
 void Authenticate(pmystruct gn, char *mechanism) {
     char message[] = "OK AUTHENTICATE completed";
     message[strlen(message)] = '\0';
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-    {
-        printf("Authenticate error\n");
-    } else {
-        printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-    }
+    char tag[] = "tagged";
+    SendMessage(gn, message, tag);
 }
 
 //          Client Commands - Authenticated State
@@ -213,12 +190,15 @@ void Select(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
     char *dir;
-    int mail_count;
+    int mail_count = 0;
     char state[] = "aut";
+    char state2[] = "sel";
+    char tag[] = "untagged";
     
     
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
         strcpy(gn->state, "sel");
         sprintf(dir, "%s/%s", gn->user, mailbox_name);
@@ -233,157 +213,166 @@ void Select(pmystruct gn, char *mailbox_name) {
                 if(DirEntry->d_name[0] == '.') continue;
                 mail_count++;
                 printf("Found mail: %s\n", DirEntry->d_name);
-                /*char message[] = "OK AUTHENTICATE completed";
-                message[strlen(message)] = '\0';
-                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-                {
-                    printf("Authenticate error\n");
-                } else {
-                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-                }*/
+                
             }
             closedir(folder);
-            char message[20];
+            char message[50];
             sprintf(message, "* %d EXISTS\n", mail_count);
-            if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-            {
-                printf("SELECT error\n");
-            } else {
-                printf("S: C%d %s %s", gn->nr, gn->licznik, message);
-            }
+            SendMessage(gn, message, tag);
+            strcpy(message, "OK [READ-WRITE] SELECT completed");
+            message[strlen(message)] = '\0';
+            strcpy(tag, "tagged");
+            SendMessage(gn, message, tag);
         }
-        char message[] = "OK [READ-WRITE] SELECT completed";
-        message[strlen(message)] = '\0';
-        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-        {
-            printf("SELECT error\n");
-        } else {
-            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-        } 
     }
 } 
 void Examine(pmystruct gn, char *mailbox_name) {
-    char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    DIR *folder;
+    struct dirent *DirEntry;
+    char *dir;
+    int mail_count;
+    char state[] = "aut";
+    char state2[] = "sel";
+    char tag[] = "untagged";
+    
+    
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
+        sprintf(dir, "%s/%s", gn->user, mailbox_name);
+        
+        folder = opendir(dir);
 
+        if(folder==NULL)
+          printf("Blad odczytu %s katalogu\n", dir);
+        else {
+            while((DirEntry=readdir(folder))!=NULL)
+            {
+                if(DirEntry->d_name[0] == '.') continue;
+                mail_count++;
+                printf("Found mail: %s\n", DirEntry->d_name);
+            }
+            closedir(folder);
+            char message[50];
+            sprintf(message, "* %d EXISTS\n", mail_count);
+            SendMessage(gn, message, tag);
+            strcpy(message, "OK [READ-ONLY] EXAMINE completed");
+            message[strlen(message)] = '\0';
+            strcpy(tag, "tagged");
+            SendMessage(gn, message, tag);
+        }
     }
 }
 void Create(pmystruct gn, char *mailbox_name) {
-    char state[] = "sel";
-    char message[] = "OK CREATE completed";
-    message[strlen(message)] = '\0';
+    char state[] = "aut";
+    char state2[] = "sel";
+    char tag[] = "tagged";
 
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
         char newdir[100];
         sprintf(newdir, "%s/%s", gn->user, mailbox_name);
         mode_t process_mask = umask(0);
         int result_code = mkdir(newdir, S_IRWXU | S_IRWXG | S_IRWXO);
         umask(process_mask);
-        if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-        {
-            printf("CREATE error\n");
-        } else {
-            printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-        } 
+        if (result_code==0) {
+            char message[] = "OK CREATE completed";
+            message[strlen(message)] = '\0';
+            SendMessage(gn, message, tag);
+        }  
+        else {
+            char message[] = "NO [CANNNOT] error";
+            message[strlen(message)] = '\0';
+            SendMessage(gn, message, tag);
+        }
     }
 }
 void Delete(pmystruct gn, char *mailbox_name) {
-    char state[] = "sel";
+    char state[] = "aut";
+    char state2[] = "sel";
+    char tag[] = "tagged";
 
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
         char com[100];
         sprintf(com, "rm -r %s/%s", gn->user, mailbox_name);
         for (int i=0; i<strlen(mailbox_name);i++) {
             mailbox_name[i]=toupper(mailbox_name[i]);
         }
-        printf("|%s|\n", mailbox_name);
         if (strcmp(mailbox_name, "INBOX")==0 || strcmp(mailbox_name, "OUTBOX")==0) {
                 char message[] = "NO [CANNOT] Acces denied";
                 message[strlen(message)] = '\0';
-                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-                {
-                    printf("DELETE error\n");
-                } else {
-                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-                } 
+                SendMessage(gn, message, tag);
         } else {
             if (system(com)==0) {
                 char message[] = "OK DELETE completed";
                 message[strlen(message)] = '\0';
-                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-                {
-                    printf("DELETE error\n");
-                } else {
-                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-                } 
+                SendMessage(gn, message, tag);
             } else {
                 char message[] = "NO [CANNOT] no such directory";
                 message[strlen(message)] = '\0';
-                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-                {
-                    printf("DELETE error\n");
-                } else {
-                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-                } 
+                SendMessage(gn, message, tag);
             }
         }
     }
 }
 void Rename(pmystruct gn, char *mailbox_name, char *new_mailbox_name) {
-    char state[] = "sel";
+    char state[] = "aut";
+    char state2[] = "sel";
     char message[] = "OK RENAME completed";
     message[strlen(message)] = '\0';
 
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void Subscribe(pmystruct gn, char *mailbox_name) {
-    char state[] = "sel";
-    if (!checkState(gn, state)) {
-        wrongState(gn);
+    char state[] = "aut";
+    char state2[] = "sel";
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void Unsubscribe(pmystruct gn, char *mailbox_name) {
-    char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    char state[] = "aut";
+    char state2[] = "sel";
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void List(pmystruct gn/*reference name
                mailbox name with possible wildcards*/) {
-    char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    char state[] = "aut";
+    char state2[] = "sel";
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void Lsub(pmystruct gn/*reference name
                mailbox name with possible wildcards*/) {
-    char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    char state[] = "aut";
+    char state2[] = "sel";
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void Status(pmystruct gn, char *mailbox_name) {
-    char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    char state[] = "aut";
+    char state2[] = "sel";
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
 
     }
@@ -392,9 +381,10 @@ void Append(pmystruct gn, char *mailbox_name/*mailbox name
                OPTIONAL flag parenthesized list
                OPTIONAL date/time string
                message literal*/) {
-    char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    char state[] = "aut";
+    char state2[] = "sel";
+    if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
+        WrongState(gn);
     } else {
 
     }
@@ -404,24 +394,24 @@ void Append(pmystruct gn, char *mailbox_name/*mailbox name
 
 void Check(pmystruct gn) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }
 } 
 void Close(pmystruct gn) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void Expunge(pmystruct gn) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }
@@ -429,8 +419,8 @@ void Expunge(pmystruct gn) {
 void Search(pmystruct gn/*OPTIONAL [CHARSET] specification
                searching criteria (one or more)*/) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }
@@ -438,8 +428,8 @@ void Search(pmystruct gn/*OPTIONAL [CHARSET] specification
 void Fetch(pmystruct gn/*sequence set
                message data item names or macro*/) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }
@@ -448,24 +438,24 @@ void Store(pmystruct gn/*sequence set
                message data item name
                value for message data item*/) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void Copy(pmystruct gn, char *sequence_set, char *mailbox_name) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }
 }
 void Uid(pmystruct gn, char *command_name, char *command_arguments) {
     char state[] = "sel";
-    if (checkState(gn, state)==false) {
-        wrongState(gn);
+    if (CheckState(gn, state)==false) {
+        WrongState(gn);
     } else {
 
     }

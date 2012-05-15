@@ -63,7 +63,7 @@ int main(void)
                 printf("S: %s\n", bufor);
                 break;*/
        //}
-                printf("S: %s\n", bufor);
+        printf("S: %s\n", bufor);
         printf("Podaj wiadomosc: ");
         fflush(stdin);      
         fgets(sciezka, 1024, stdin);

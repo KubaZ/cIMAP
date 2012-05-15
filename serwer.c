@@ -173,10 +173,8 @@ void Login(pmystruct gn, char *user, char *password) {
     message[strlen(message)] = '\0';
     
     char file[] = "logins.txt";
-    char line[strlen(user)+strlen(password)+1];
-    strcpy(line, user);
-    strcat(line, " ");
-    strcat(line, password);
+    char line[60];
+    sprintf(line, "%s %s", user, password);
 
     if (Search_User(file, line)==0){
         strcpy(gn->user, user);
@@ -224,11 +222,7 @@ void Select(pmystruct gn, char *mailbox_name) {
         wrongState(gn);
     } else {
         strcpy(gn->state, "sel");
-        
-        strcpy(dir,gn->user);
-        strcat(dir, "/");
-        strcat(dir,mailbox_name);
-        printf("%s\n",  dir);
+        sprintf(dir, "%s/%s", gn->user, mailbox_name);
         
         folder = opendir(dir);
 
@@ -250,17 +244,15 @@ void Select(pmystruct gn, char *mailbox_name) {
                     printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
                 }*/
             }
-/*            closedir(folder);
+            closedir(folder);
             char message[100];
-            strcpy(message, " * ");
-            //strcat(message, mail_count);
-            strcat(message, " EXISTS\n"); 
+            sprintf(message, "* %d EXISTS", mail_count);
             if (send(gn->nr, message, strlen(message), 0) != strlen(message))
             {
                 printf("SELECT error\n");
             } else {
                 printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-            } */
+            }
         }
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
@@ -287,9 +279,7 @@ void Create(pmystruct gn, char *mailbox_name) {
         wrongState(gn);
     } else {
         char newdir[100];
-        strcpy(newdir, gn->user);
-        strcat(newdir, "/");
-        strcat(newdir, mailbox_name);
+        sprintf(newdir, "%s/%s", gn->user, mailbox_name);
         mode_t process_mask = umask(0);
         int result_code = mkdir(newdir, S_IRWXU | S_IRWXG | S_IRWXO);
         umask(process_mask);
@@ -310,10 +300,7 @@ void Delete(pmystruct gn, char *mailbox_name) {
         wrongState(gn);
     } else {
         char com[100];
-        strcpy(com, "rm -r ");
-        strcat(com, gn->user);
-        strcat(com, "/");
-        strcat(com, mailbox_name);
+        sprintf(com, "rm -r %s/%s", gn->user, mailbox_name);
         if (system(com)==0) {
             if (send(gn->nr, message, strlen(message), 0) != strlen(message))
             {

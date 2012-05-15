@@ -215,8 +215,7 @@ void Select(pmystruct gn, char *mailbox_name) {
     char *dir;
     int mail_count;
     char state[] = "aut";
-    char message[] = "OK [READ-WRITE] SELECT completed";
-    message[strlen(message)] = '\0';
+    
     
     if (checkState(gn, state)==false) {
         wrongState(gn);
@@ -229,11 +228,10 @@ void Select(pmystruct gn, char *mailbox_name) {
         if(folder==NULL)
           printf("Blad odczytu %s katalogu\n", dir);
         else {
-            printf("%s\n", "w else");
             while((DirEntry=readdir(folder))!=NULL)
             {
-                //printf("%s\n", "w pętli");
                 if(DirEntry->d_name[0] == '.') continue;
+                mail_count++;
                 printf("Found mail: %s\n", DirEntry->d_name);
                 /*char message[] = "OK AUTHENTICATE completed";
                 message[strlen(message)] = '\0';
@@ -245,15 +243,17 @@ void Select(pmystruct gn, char *mailbox_name) {
                 }*/
             }
             closedir(folder);
-            char message[100];
-            sprintf(message, "* %d EXISTS", mail_count);
+            char message[20];
+            sprintf(message, "* %d EXISTS\n", mail_count);
             if (send(gn->nr, message, strlen(message), 0) != strlen(message))
             {
                 printf("SELECT error\n");
             } else {
-                printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+                printf("S: C%d %s %s", gn->nr, gn->licznik, message);
             }
         }
+        char message[] = "OK [READ-WRITE] SELECT completed";
+        message[strlen(message)] = '\0';
         if (send(gn->nr, message, strlen(message), 0) != strlen(message))
         {
             printf("SELECT error\n");
@@ -293,30 +293,45 @@ void Create(pmystruct gn, char *mailbox_name) {
 }
 void Delete(pmystruct gn, char *mailbox_name) {
     char state[] = "sel";
-    char message[] = "OK DELETE completed";
-    message[strlen(message)] = '\0';
 
     if (checkState(gn, state)==false) {
         wrongState(gn);
     } else {
         char com[100];
         sprintf(com, "rm -r %s/%s", gn->user, mailbox_name);
-        if (system(com)==0) {
-            if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-            {
-                printf("DELETE error\n");
-            } else {
-                printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-            } 
+        for (int i=0; i<strlen(mailbox_name);i++) {
+            mailbox_name[i]=toupper(mailbox_name[i]);
+        }
+        printf("|%s|\n", mailbox_name);
+        if (strcmp(mailbox_name, "INBOX")==0 || strcmp(mailbox_name, "OUTBOX")==0) {
+                char message[] = "NO [CANNOT] Acces denied";
+                message[strlen(message)] = '\0';
+                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+                {
+                    printf("DELETE error\n");
+                } else {
+                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+                } 
         } else {
-            char message[] = "NO [CANNOT] no such directory";
-            message[strlen(message)] = '\0';
-            if (send(gn->nr, message, strlen(message), 0) != strlen(message))
-            {
-                printf("DELETE error\n");
+            if (system(com)==0) {
+                char message[] = "OK DELETE completed";
+                message[strlen(message)] = '\0';
+                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+                {
+                    printf("DELETE error\n");
+                } else {
+                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+                } 
             } else {
-                printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
-            } 
+                char message[] = "NO [CANNOT] no such directory";
+                message[strlen(message)] = '\0';
+                if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+                {
+                    printf("DELETE error\n");
+                } else {
+                    printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+                } 
+            }
         }
     }
 }

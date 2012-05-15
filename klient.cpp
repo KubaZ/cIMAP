@@ -49,21 +49,18 @@ int main(void)
     printf("Polaczenie nawiazane\n");
 
     while(1) {
-        /*char *full;
-        strcpy(full,"");*/
-        //while(1) {
+        while(1) {
             memset(bufor, 0, 1024);
             n=recv(gn, bufor, 1024, 0);
-            /*if (bufor[n-1]=='\n') {
-                strcat(full, bufor);
+            if (bufor[n-1]=='\n') {
                 printf("S: %s", bufor);
                 continue;
-            } else
-                strcat(full, bufor);
+            } else {
                 printf("S: %s\n", bufor);
-                break;*/
-       //}
-        printf("S: %s\n", bufor);
+                break;
+            }
+        }
+        //printf("S: %s\n", bufor);
         printf("Podaj wiadomosc: ");
         fflush(stdin);      
         fgets(sciezka, 1024, stdin);

@@ -45,6 +45,7 @@ struct klient {
     char state[4];
     char user[30];
     char licznik[5];
+    char mailbox[60];
 } klient;
 
 typedef struct klient * pmystruct;
@@ -53,6 +54,23 @@ typedef struct klient * pmystruct;
 pmystruct getpstruct() {
     pmystruct temp=(pmystruct)malloc(sizeof(pmystruct*)) ;
     return temp;
+}
+
+char *extractArgument(char *text, int argc) {
+    char *arg;
+    char copy[strlen(text)];
+    strcpy(copy, text);
+    int i=1;
+    arg = strtok(copy, " \n\0");
+    if (argc>=2) {
+        while (i<argc) {
+            arg = strtok(NULL, " \n\0");
+            i++;
+        }
+        return arg;
+    } else {
+        return arg;
+    }
 }
 
 void SendMessage(pmystruct gn, char message[], char type[]) {
@@ -190,17 +208,17 @@ void Select(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
     char *dir;
+    unsigned char isFile =0x8;
     int mail_count = 0;
     char state[] = "aut";
     char state2[] = "sel";
     char tag[] = "untagged";
     
-    
-    
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
     } else {
         strcpy(gn->state, "sel");
+        strcpy(gn->mailbox, mailbox_name);
         sprintf(dir, "%s/%s", gn->user, mailbox_name);
         
         folder = opendir(dir);
@@ -210,10 +228,9 @@ void Select(pmystruct gn, char *mailbox_name) {
         else {
             while((DirEntry=readdir(folder))!=NULL)
             {
-                if(DirEntry->d_name[0] == '.') continue;
+                if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
-                printf("Found mail: %s\n", DirEntry->d_name);
-                
+                //printf("Found mail: %s\n", DirEntry->d_name);  
             }
             closedir(folder);
             char message[50];
@@ -230,11 +247,11 @@ void Examine(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
     char *dir;
-    int mail_count;
+    unsigned char isFile =0x8;
+    int mail_count = 0;
     char state[] = "aut";
     char state2[] = "sel";
     char tag[] = "untagged";
-    
     
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -248,9 +265,9 @@ void Examine(pmystruct gn, char *mailbox_name) {
         else {
             while((DirEntry=readdir(folder))!=NULL)
             {
-                if(DirEntry->d_name[0] == '.') continue;
+                if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
-                printf("Found mail: %s\n", DirEntry->d_name);
+                //printf("Found mail: %s\n", DirEntry->d_name);
             }
             closedir(folder);
             char message[50];
@@ -458,23 +475,6 @@ void Uid(pmystruct gn, char *command_name, char *command_arguments) {
         WrongState(gn);
     } else {
 
-    }
-}
-
-char *extractArgument(char *text, int argc) {
-    char *arg;
-    char copy[strlen(text)];
-    strcpy(copy, text);
-    int i=1;
-    arg = strtok(copy, " \n\0");
-    if (argc>=2) {
-        while (i<argc) {
-            arg = strtok(NULL, " \n\0");
-            i++;
-        }
-        return arg;
-    } else {
-        return arg;
     }
 }
 

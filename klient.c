@@ -18,7 +18,7 @@ int main(void)
     int port = 21212;
     struct hostent *h;
     char nazwa[512] = "localhost";
-    char bufor[1024];
+    char bufor[2048];
     char sciezka[512];
     char *fullmessage;
     long dl_pliku, odebrano, odebrano_razem, wiadomosc;
@@ -51,8 +51,8 @@ int main(void)
 
     while(1) {
         while(1) {
-            memset(bufor, 0, 1024);
-            n=recv(gn, bufor, 1024, 0);
+            memset(bufor, 0, 2049);
+            n=recv(gn, bufor, 2048, 0);
             if (bufor[n-1]=='\n') {
                 printf("S: %s", bufor);
                 continue;
@@ -61,7 +61,7 @@ int main(void)
                 break;
             }
             if (n==0) {
-                return;
+                return 0;
             }
         }
         //printf("S: %s\n", bufor);

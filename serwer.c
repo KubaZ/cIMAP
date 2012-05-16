@@ -53,7 +53,7 @@ struct klient {
     int nr;
     char state[5];
     char user[30];
-    char licznik[6];
+    char licznik[5];
     char mailbox[100];
 } klient;
 
@@ -109,15 +109,18 @@ char *extractArgument(char *text, int argc) {
     }
 }
 
-void SendMessage(pmystruct gn, char message[], char type[]) {
-    if (send(gn->nr, message, strlen(message), 0) != strlen(message))
+int SendMessage(pmystruct gn, char message[], char type[]) {
+    int i;
+    if ((i=send(gn->nr, message, strlen(message), 0)) != strlen(message))
     {
         printf("Send message error: %s\n", strerror(errno));
+        return i;
     } else {
         if (strcmp(type, "untagged")==0)
             printf("S: C%d %s %s", gn->nr, gn->licznik, message);
         else 
             printf("S: C%d %s %s\n", gn->nr, gn->licznik, message);
+        return i;
     }
 }
 
@@ -221,7 +224,8 @@ void Login(pmystruct gn, char *user, char *password) {
         sprintf(line, "%s %s", user, output);
 
         if (Search_User(file, line)==0){
-            strcpy(gn->user, user);
+            sprintf(gn->user, "%s", user);
+            gn->user[strlen(gn->user)] = '\0';
             strcpy(gn->state, "aut");
             SendMessage(gn, message, tag);
         } else {
@@ -593,14 +597,14 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     unsigned char isFile =0x8;
     char dir[SENDSIZE], *number;
     char plik[120];
-    long  sent, read, sent_full=0, dl_file=0;
+    long sent, read, sent_full=0, dl_file=0;
     int mail_count = 0;
-    unsigned char bufor[BUFSIZE];
+     char bufor[BUFSIZE];
     char state[] = "sel";
 
     char message[SENDSIZE] = "OK FETCH completed";
     message[strlen(message)] = '\0';
-    char tag[] = "tagged";
+    char tag[] = "untagged";
 
 
     if (CheckState(gn, state)==false) {
@@ -618,14 +622,13 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
         else {
             //printf("WHILE fileinfo\n");
             while((DirEntry=readdir(folder))!=NULL)
-            {
-                
+            { 
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
                 sprintf(number, "%d", mail_count);
                 //printf("searching fileinfo %s for %s\n", number, sequence_set);
                 if (strcmp(sequence_set, number)==0) {
-                    printf("Found mail\n");
+                    //printf("Found mail\n");
                     sprintf(plik, "%s/%s/%s", gn->user, gn->mailbox, DirEntry->d_name);
                     file = fopen(plik, "rb");
                     struct stat fileinfo;
@@ -640,8 +643,9 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
                     while (sent_full<dl_file) {
                         //printf("In while\n");
                         read = fread(bufor, 1, BUFSIZE, file);
+                        bufor[strlen(bufor)-1] = '\n';
                         //printf("BUFOR: %s\n", bufor);
-                        sent = send(gn->nr, bufor, read, 0);
+                        sent = send(gn->nr, bufor, strlen(bufor), 0);
                         if (read != sent)
                             break;
                         sent_full += sent;
@@ -653,6 +657,7 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
                 //printf("Found mail: %s\n", DirEntry->d_name);
             }
             closedir(folder);
+            strcpy(tag, "tagged");
             SendMessage(gn, message, tag);
         }
     }
@@ -784,12 +789,12 @@ void Licznik(char *licznik) {
         licznik[1]++;
         licznik[2]='0';
         licznik[3]='0';
-    } else if (licznik[0]!='z'){
+    }/*else if (licznik[0]!='z'){
         licznik[0]++;
         licznik[1]='0';
         licznik[2]='0';
         licznik[3]='0';
-    }
+    }*/
 }
 
 int recvtimeout(int s, char *buf, int len, int timeout)
@@ -862,7 +867,7 @@ int main(void)
 
         if (fork() == 0)
         {
-            strcpy(user->licznik,"a001");
+            sprintf(user->licznik,"a001");
             strcpy(user->state,"non");
             Greeting(user);
             while(1){

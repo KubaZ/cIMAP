@@ -1,1 +1,17 @@
 IMAP4rev1 server implementation in c language.
+
+TODO:
+not authenticated state commands:
+starttls
+authenticate
+authenticated state commands:
+subscribe
+unsubscribe
+lsub
+list
+status
+append
+selected state commands:
+all
+
+message flags

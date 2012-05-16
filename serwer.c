@@ -54,7 +54,7 @@ struct klient {
     char state[5];
     char user[30];
     char licznik[6];
-    char mailbox[60];
+    char mailbox[100];
 } klient;
 
 typedef struct klient * pmystruct;
@@ -112,7 +112,7 @@ char *extractArgument(char *text, int argc) {
 void SendMessage(pmystruct gn, char message[], char type[]) {
     if (send(gn->nr, message, strlen(message), 0) != strlen(message))
     {
-        printf("Send message error\n");
+        printf("Send message error: %s\n", strerror(errno));
     } else {
         if (strcmp(type, "untagged")==0)
             printf("S: C%d %s %s", gn->nr, gn->licznik, message);
@@ -138,7 +138,7 @@ bool CheckState(pmystruct gn, char *state) {
 
 
 void WrongState(pmystruct gn) {
-    char message[SENDSIZE] = "wrong user state";
+    char message[SENDSIZE] = "NO [CANNOT] User state inappropriate";
     message[strlen(message)] = '\0';
     char tag[] = "tagged";
     SendMessage(gn, message, tag);
@@ -173,7 +173,8 @@ int Search_User(char *fname, char *str) {
 
 void Capability(pmystruct gn) {
     char tag[] = "untagged";
-    char message[SENDSIZE] = "* CAPABILITY IMAP4rev1 AUTH=PLAIN\n";
+    char message[SENDSIZE];
+    strcpy(message, "* CAPABILITY IMAP4rev1 AUTH=PLAIN\n");
     SendMessage(gn, message, tag);
     strcpy(tag, "tagged");
     strcpy(message,"OK CAPABILITY completed");
@@ -259,7 +260,7 @@ void Select(pmystruct gn, char *mailbox_name) {
     } else {
         strcpy(gn->state, "sel");
         strcpy(gn->mailbox, mailbox_name);
-        sprintf(dir, "%s/%s", gn->user, mailbox_name);
+        sprintf(dir, "%s/%s", gn->user, gn->mailbox);
         
         folder = opendir(dir);
 
@@ -355,6 +356,7 @@ void Create(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
     char tag[] = "tagged";
+    char message[SENDSIZE];
 
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -365,7 +367,7 @@ void Create(pmystruct gn, char *mailbox_name) {
             mailbox_name[i]=toupper(mailbox_name[i]);
         }
         if (strcmp(mailbox_name, "INBOX")==0 || strcmp(mailbox_name, "OUTBOX")==0) {
-            char message[SENDSIZE] = "NO [CANNNOT] Access denied";
+            strcpy(message, "NO [CANNNOT] Access denied");
             message[strlen(message)] = '\0';
             SendMessage(gn, message, tag);
         } else {
@@ -373,11 +375,10 @@ void Create(pmystruct gn, char *mailbox_name) {
             int result_code = mkdir(newdir, S_IRWXU | S_IRWXG | S_IRWXO);
             umask(process_mask);
             if (result_code==0) {
-                char message[SENDSIZE] = "OK CREATE completed";
+                strcpy(message, "OK CREATE completed");
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
             } else {
-                char message[SENDSIZE];
                 sprintf(message, "NO [CANNOT] %s", strerror(errno));
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
@@ -390,6 +391,7 @@ void Delete(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
     char tag[] = "tagged";
+    char message[SENDSIZE];
 
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -400,16 +402,15 @@ void Delete(pmystruct gn, char *mailbox_name) {
             mailbox_name[i]=toupper(mailbox_name[i]);
         }
         if (strcmp(mailbox_name, "INBOX")==0 || strcmp(mailbox_name, "OUTBOX" )==0) {
-                char message[SENDSIZE] = "NO [CANNOT] Access denied";
+                strcpy(message, "NO [CANNOT] Access denied");
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
         } else {
             if (rmdir(com)==0) {
-                char message[SENDSIZE] = "OK DELETE completed";
+                strcpy(message, "OK DELETE completed");
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
             } else {
-                char message[SENDSIZE];
                 sprintf(message, "NO [CANNOT] %s", strerror(errno));
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
@@ -585,14 +586,75 @@ void Search(pmystruct gn, char *search_criteria) {
 }
 
 void Fetch(pmystruct gn, char *sequence_set, char *macro) {
+    DIR *folder;
+    FILE* file;
+    
+    struct dirent *DirEntry;
+    unsigned char isFile =0x8;
+    char dir[SENDSIZE], *number;
+    char plik[120];
+    long  sent, read, sent_full=0, dl_file=0;
+    int mail_count = 0;
+    unsigned char bufor[BUFSIZE];
     char state[] = "sel";
+
     char message[SENDSIZE] = "OK FETCH completed";
     message[strlen(message)] = '\0';
     char tag[] = "tagged";
+
+
     if (CheckState(gn, state)==false) {
         WrongState(gn);
     } else {
-        SendMessage(gn, message, tag);
+        //printf("File opening\n");
+        //printf("%s/%s\n", gn->user, gn->mailbox);
+        sprintf(dir, "%s/%s", gn->user, gn->mailbox);
+        folder = opendir(dir);
+        if(folder==NULL) {
+            sprintf(message, "NO [CANNOT] %s", strerror(errno));
+            strcpy(tag, "tagged");
+            SendMessage(gn, message, tag);
+        }
+        else {
+            //printf("WHILE fileinfo\n");
+            while((DirEntry=readdir(folder))!=NULL)
+            {
+                
+                if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
+                mail_count++;
+                sprintf(number, "%d", mail_count);
+                //printf("searching fileinfo %s for %s\n", number, sequence_set);
+                if (strcmp(sequence_set, number)==0) {
+                    printf("Found mail\n");
+                    sprintf(plik, "%s/%s/%s", gn->user, gn->mailbox, DirEntry->d_name);
+                    file = fopen(plik, "rb");
+                    struct stat fileinfo;
+                    
+                    if (stat(plik, &fileinfo) < 0)
+                    {
+                        printf("Potomny: nie moge pobrac informacji o pliku\n");
+                        break;
+                    }
+                    dl_file = fileinfo.st_size;
+                    //printf("wielkosc pliku %s : %ld\n",DirEntry->d_name, dl_file);
+                    while (sent_full<dl_file) {
+                        //printf("In while\n");
+                        read = fread(bufor, 1, BUFSIZE, file);
+                        //printf("BUFOR: %s\n", bufor);
+                        sent = send(gn->nr, bufor, read, 0);
+                        if (read != sent)
+                            break;
+                        sent_full += sent;
+                        //printf("Potomny: wyslano %ld bajtow\n", sent_full);
+                    }
+                    //printf("After while\n");
+                    fclose(file);
+                }
+                //printf("Found mail: %s\n", DirEntry->d_name);
+            }
+            closedir(folder);
+            SendMessage(gn, message, tag);
+        }
     }
 }
 
@@ -705,7 +767,7 @@ void CommandParser( pmystruct gn, char *command) {
         }
     } 
     if (!found) {
-        char message[] = "Command not found or wrong number of arguments";
+        char message[SENDSIZE] = "Command not found or wrong number of arguments";
         message[strlen(message)] = '\0';
         char tag[] = "tagged";
         SendMessage(gn, message, tag);
@@ -770,12 +832,12 @@ int main(void)
     
     if (bind(gn_nasluch, (struct sockaddr*) &adr, dladr) < 0)
     {
-        printf("S: bind nie powiodl sie\n");
+        printf("S: %s\n", strerror(errno));
         return 1;
     }
     
     if (listen(gn_nasluch, 10) < 0) {
-       printf("S: Listen nie powiodl sie.\n");
+       printf("S: %s\n", strerror(errno));
        return 1; 
     }
     
@@ -789,7 +851,7 @@ int main(void)
         time ( &rawtime );
 
         if (user->nr < 0) {
-            printf("S: accept zwrocil blad\n");
+            printf("S: %s\n", strerror(errno));
             continue;
         }
 
@@ -832,4 +894,4 @@ int main(void)
         }
     }  
     return 0;
-}
+}   

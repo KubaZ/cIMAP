@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <errno.h>
 
 #define IP(H) *((unsigned long*) (H)->h_addr_list[0])
 
@@ -60,7 +61,7 @@ int main(void)
                 break;
             }
             if (n==0) {
-                return 0;
+                return;
             }
         }
         //printf("S: %s\n", bufor);
@@ -69,7 +70,7 @@ int main(void)
         fgets(sciezka, 1024, stdin);
         if (send(gn, sciezka, strlen(sciezka), 0) != strlen(sciezka))
         {
-            printf("Blad przy wysylaniu sciezki\n");
+            printf("%s\n", strerror(errno));
             close(gn);
             return 1;
         }

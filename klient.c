@@ -59,6 +59,9 @@ int main(void)
                 printf("S: %s\n", bufor);
                 break;
             }
+            if (n==0) {
+                return 0;
+            }
         }
         //printf("S: %s\n", bufor);
         printf("Podaj wiadomosc: ");

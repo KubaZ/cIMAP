@@ -753,16 +753,6 @@ int recvtimeout(int s, char *buf, int len, int timeout)
     return recv(s, buf, len, 0);
 }
 
-void Timeout(pmystruct gn) {
-    char message[] = "* Connection Timeout\n* BYE IMAP4rev1 Server logging out\n";  
-    char tag[] = "untagged";
-    SendMessage(gn, message, tag);
-    strcpy(gn->state, "log");
-    strcpy(message, "OK LOGOUT Completed\n");
-    strcpy(tag, "tagged");
-    SendMessage(gn, message, tag);
-}
-
 int main(void)
 {
     int gn_nasluch;
@@ -803,9 +793,9 @@ int main(void)
             continue;
         }
 
-        printf("S: polaczenie od %s:%u\n", inet_ntoa(adr.sin_addr), ntohs(adr.sin_port));
+        printf("S: Connection from %s:%u\n", inet_ntoa(adr.sin_addr), ntohs(adr.sin_port));
         file = fopen("log.txt","a+"); 
-        fprintf(file,"S: polaczenie od %s:%u Czas: %s", inet_ntoa(adr.sin_addr), ntohs(adr.sin_port), ctime(&rawtime));
+        fprintf(file,"S: Connection from %s:%u Time: %s", inet_ntoa(adr.sin_addr), ntohs(adr.sin_port), ctime(&rawtime));
         fclose(file);
 
         if (fork() == 0)
@@ -821,12 +811,14 @@ int main(void)
                     break;
                 }
                 else if (n == -2) {
-                    Timeout(user);
+                    Logout(user);
 
-                } else {
+                } else if (n>0) {
                     printf("C: C%d %s %s", user->nr, user->licznik, bufor);
                     CommandParser(user, bufor);
                     Licznik(user->licznik);
+                } else {
+                    Logout(user);
                 }
                 if (strcmp(user->state, "log")==0) {
                     free(user);

@@ -279,6 +279,12 @@ void Select(pmystruct gn, char *mailbox_name) {
             sprintf(message, "* %d EXISTS\n", mail_count);
             strcpy(tag, "untagged");
             SendMessage(gn, message, tag);
+            sprintf(message, "* %d RECENT\n", mail_count);
+            strcpy(tag, "untagged");
+            SendMessage(gn, message, tag);
+            strcpy(message, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\n");
+            strcpy(tag, "untagged");
+            SendMessage(gn, message, tag); 
             for (int i=0; i<strlen(mailbox_name);i++) {
                 mailbox_name[i]=toupper(mailbox_name[i]);
             }
@@ -329,6 +335,12 @@ void Examine(pmystruct gn, char *mailbox_name) {
             }
             closedir(folder);
             sprintf(message, "* %d EXISTS\n", mail_count);
+            strcpy(tag, "untagged");
+            SendMessage(gn, message, tag);
+            sprintf(message, "* %d RECENT\n", mail_count);
+            strcpy(tag, "untagged");
+            SendMessage(gn, message, tag);
+            strcpy(message, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\n");
             strcpy(tag, "untagged");
             SendMessage(gn, message, tag);
             strcpy(message, "OK [READ-ONLY] EXAMINE completed");
@@ -543,6 +555,7 @@ void Close(pmystruct gn) {
     if (CheckState(gn, state)==false) {
         WrongState(gn);
     } else {
+        strcpy(gn->state, "aut");
         SendMessage(gn, message, tag);
     }
 }

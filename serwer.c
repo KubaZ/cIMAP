@@ -49,7 +49,7 @@ typedef struct functionThreeMETA {
 Struktura Klienta zawierająca jego nr deskryptora, stan, 
 licznik poleceń oraz aktualnie wybrany folder.
 */
-struct klient {
+struct klient{
     int nr;
     char state[5];
     char user[30];
@@ -69,26 +69,20 @@ char *str2md5(const char *str, int length) {
     int n;
     MD5_CTX c;
     unsigned char digest[16];
-    char *out = (char*)malloc(33);
+    char *out = new char[33];
 
     MD5_Init(&c);
 
-    while (length > 0) {
-        if (length > 512) {
-            MD5_Update(&c, str, 512);
-        } else {
-            MD5_Update(&c, str, length);
-        }
-        length -= 512;
-        str += 512;
-    }
+    MD5_Update(&c, str, length);
 
     MD5_Final(digest, &c);
 
+    //sprintf(out, "%x", digest);
     for (n = 0; n < 16; ++n) {
         snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
     }
-
+    out[33]='\0';
+    //printf("crypted: %s\n", out);
     return out;
 }
 
@@ -213,18 +207,20 @@ void Starttls(pmystruct gn) {
 }
 
 void Login(pmystruct gn, char *user, char *password) {
-    char message[SENDSIZE] = "OK LOGIN completed";
+    char message[100];
+    strcpy(message, "OK LOGIN completed");
     message[strlen(message)] = '\0';
     char tag[] = "tagged";
     char state[] = "non";
-    char *output = str2md5(password, strlen(password));
+    //char output[33];
+    //strcpy(output, str2md5(password, strlen(password)));
     if (CheckState(gn, state)==true) {
         char file[] = "logins.txt";
         char line[128];
-        sprintf(line, "%s %s", user, output);
+        sprintf(line, "%s %s", user, password);
 
         if (Search_User(file, line)==0){
-            sprintf(gn->user, "%s", user);
+            strcpy(gn->user, user);
             gn->user[strlen(gn->user)] = '\0';
             strcpy(gn->state, "aut");
             SendMessage(gn, message, tag);
@@ -251,7 +247,7 @@ void Authenticate(pmystruct gn, char *mechanism) {
 void Select(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
-    char *dir;
+    char *dir = new char[128];
     unsigned char isFile =0x8;
     int mail_count = 0;
     char state[] = "aut";
@@ -262,18 +258,18 @@ void Select(pmystruct gn, char *mailbox_name) {
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
     } else {
-        strcpy(gn->state, "sel");
-        strcpy(gn->mailbox, mailbox_name);
-        sprintf(dir, "%s/%s", gn->user, gn->mailbox);
+        
+        sprintf(dir, "%s/%s", gn->user, mailbox_name);
         
         folder = opendir(dir);
-
         if(folder==NULL) {
             sprintf(message, "NO [CANNOT] %s", strerror(errno));
             strcpy(tag, "tagged");
             SendMessage(gn, message, tag);
         }
         else {
+            strcpy(gn->state, "sel");
+            strcpy(gn->mailbox, mailbox_name);
             while((DirEntry=readdir(folder))!=NULL)
             {
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
@@ -282,26 +278,22 @@ void Select(pmystruct gn, char *mailbox_name) {
             }
             closedir(folder);
             sprintf(message, "* %d EXISTS\n", mail_count);
-            strcpy(tag, "untagged");
             SendMessage(gn, message, tag);
             sprintf(message, "* %d RECENT\n", mail_count);
-            strcpy(tag, "untagged");
             SendMessage(gn, message, tag);
             strcpy(message, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\n");
-            strcpy(tag, "untagged");
             SendMessage(gn, message, tag); 
             for (int i=0; i<strlen(mailbox_name);i++) {
                 mailbox_name[i]=toupper(mailbox_name[i]);
             }
+            strcpy(tag, "tagged");
             if (strcmp(mailbox_name, "INBOX")==0 || strcmp(mailbox_name, "OUTBOX")==0) {
                 strcpy(message, "OK [READ-ONLY] SELECT completed");
                 message[strlen(message)] = '\0';
-                strcpy(tag, "tagged");
                 SendMessage(gn, message, tag);
             } else {
                 strcpy(message, "OK [READ-WRITE] SELECT completed");
                 message[strlen(message)] = '\0';
-                strcpy(tag, "tagged");
                 SendMessage(gn, message, tag);
             }
         }
@@ -311,7 +303,7 @@ void Select(pmystruct gn, char *mailbox_name) {
 void Examine(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
-    char *dir;
+    char *dir = new char[128];
     unsigned char isFile =0x8;
     int mail_count = 0;
     char state[] = "aut";
@@ -340,13 +332,10 @@ void Examine(pmystruct gn, char *mailbox_name) {
             }
             closedir(folder);
             sprintf(message, "* %d EXISTS\n", mail_count);
-            strcpy(tag, "untagged");
             SendMessage(gn, message, tag);
             sprintf(message, "* %d RECENT\n", mail_count);
-            strcpy(tag, "untagged");
             SendMessage(gn, message, tag);
             strcpy(message, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\n");
-            strcpy(tag, "untagged");
             SendMessage(gn, message, tag);
             strcpy(message, "OK [READ-ONLY] EXAMINE completed");
             message[strlen(message)] = '\0';
@@ -595,23 +584,21 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     
     struct dirent *DirEntry;
     unsigned char isFile =0x8;
-    char dir[SENDSIZE], *number;
-    char plik[120];
+    char *number = new char[5];
+    char *dir = new char[128];
+    char plik[128];
     long sent, read, sent_full=0, dl_file=0;
     int mail_count = 0;
-     char bufor[BUFSIZE];
+    char bufor[BUFSIZE];
     char state[] = "sel";
 
     char message[SENDSIZE] = "OK FETCH completed";
     message[strlen(message)] = '\0';
     char tag[] = "untagged";
 
-
     if (CheckState(gn, state)==false) {
         WrongState(gn);
     } else {
-        //printf("File opening\n");
-        //printf("%s/%s\n", gn->user, gn->mailbox);
         sprintf(dir, "%s/%s", gn->user, gn->mailbox);
         folder = opendir(dir);
         if(folder==NULL) {
@@ -620,41 +607,37 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
             SendMessage(gn, message, tag);
         }
         else {
-            //printf("WHILE fileinfo\n");
             while((DirEntry=readdir(folder))!=NULL)
             { 
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
                 sprintf(number, "%d", mail_count);
-                //printf("searching fileinfo %s for %s\n", number, sequence_set);
+                printf("%d %s\n", mail_count, number);
                 if (strcmp(sequence_set, number)==0) {
-                    //printf("Found mail\n");
                     sprintf(plik, "%s/%s/%s", gn->user, gn->mailbox, DirEntry->d_name);
+                    printf("%s\n",plik);
                     file = fopen(plik, "rb");
                     struct stat fileinfo;
                     
                     if (stat(plik, &fileinfo) < 0)
                     {
-                        printf("Potomny: nie moge pobrac informacji o pliku\n");
+                        printf("%s\n",strerror(errno));
                         break;
                     }
                     dl_file = fileinfo.st_size;
-                    //printf("wielkosc pliku %s : %ld\n",DirEntry->d_name, dl_file);
+                    printf("%ld\n", dl_file);
                     while (sent_full<dl_file) {
-                        //printf("In while\n");
                         read = fread(bufor, 1, BUFSIZE, file);
+                        printf("%s", bufor);
                         bufor[strlen(bufor)-1] = '\n';
-                        //printf("BUFOR: %s\n", bufor);
                         sent = send(gn->nr, bufor, strlen(bufor), 0);
                         if (read != sent)
                             break;
                         sent_full += sent;
-                        //printf("Potomny: wyslano %ld bajtow\n", sent_full);
                     }
-                    //printf("After while\n");
                     fclose(file);
+                    break;
                 }
-                //printf("Found mail: %s\n", DirEntry->d_name);
             }
             closedir(folder);
             strcpy(tag, "tagged");
@@ -707,6 +690,23 @@ first: extract command name;
 second: check if command exists;
 third: extract args from command and exec;
 */
+void Licznik(char *licznik) {
+    if (licznik[3]!='9')
+        licznik[3]++;
+    else if (licznik[2]!=9) {
+        licznik[2]++;
+        licznik[3]='0';
+    } else if (licznik[1]!=9) {
+        licznik[1]++;
+        licznik[2]='0';
+        licznik[3]='0';
+    }/*else if (licznik[0]!='z'){
+        licznik[0]++;
+        licznik[1]='0';
+        licznik[2]='0';
+        licznik[3]='0';
+    }*/
+}
 void CommandParser( pmystruct gn, char *command) {
 
     int tmp=0, argcount=1, max=0, current=0;
@@ -777,25 +777,10 @@ void CommandParser( pmystruct gn, char *command) {
         char tag[] = "tagged";
         SendMessage(gn, message, tag);
     }
+    Licznik(gn->licznik);
 }
 
-void Licznik(char *licznik) {
-    if (licznik[3]!='9')
-        licznik[3]++;
-    else if (licznik[2]!=9) {
-        licznik[2]++;
-        licznik[3]='0';
-    } else if (licznik[1]!=9) {
-        licznik[1]++;
-        licznik[2]='0';
-        licznik[3]='0';
-    }/*else if (licznik[0]!='z'){
-        licznik[0]++;
-        licznik[1]='0';
-        licznik[2]='0';
-        licznik[3]='0';
-    }*/
-}
+
 
 int recvtimeout(int s, char *buf, int len, int timeout)
 {
@@ -867,7 +852,7 @@ int main(void)
 
         if (fork() == 0)
         {
-            sprintf(user->licznik,"a001");
+            strcpy(user->licznik,"a001");
             strcpy(user->state,"non");
             Greeting(user);
             while(1){
@@ -883,7 +868,6 @@ int main(void)
                 } else if (n>0) {
                     printf("C: C%d %s %s", user->nr, user->licznik, bufor);
                     CommandParser(user, bufor);
-                    Licznik(user->licznik);
                 } else {
                     Logout(user);
                 }

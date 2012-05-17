@@ -53,8 +53,8 @@ int main(void)
         while(1) {
             memset(bufor, 0, 2049);
             n=recv(gn, bufor, 2048, 0);
-            if (bufor[n-1]=='\n') {
-                printf("S: %s", bufor);
+            if (bufor[n-1]=='\n' || n == 2048) {
+                printf("S: %s\n", bufor);
                 continue;
             } else {
                 printf("S: %s\n", bufor);

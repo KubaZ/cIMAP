@@ -57,7 +57,7 @@ int main(void)
                 printf("S: %s\n", bufor);
                 continue;
             } else {
-                printf("S: %s\n", bufor);
+                printf("S: %s", bufor);
                 break;
             }
             if (n==0) {

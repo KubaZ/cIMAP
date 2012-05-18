@@ -406,7 +406,6 @@ void Delete(pmystruct gn, char *mailbox_name) {
         } else {
             folder = opendir(com);
             if (stat(com, &dirinfo)>0) {
-                printf("S: %s\n", strerror(errno));
                 sprintf(message, "NO [CANNOT] %s", strerror(errno));
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
@@ -426,7 +425,6 @@ void Delete(pmystruct gn, char *mailbox_name) {
                     while((DirEntry=readdir(folder))!=NULL) {
                         if(DirEntry->d_name[0] == '.') continue;
                         sprintf(filepath, "%s/%s", com, DirEntry->d_name);
-                        printf("%s\n", filepath);
                         remove(filepath);
                     }
                     if (rmdir(com)==0) {
@@ -620,9 +618,10 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     char *dir = new char[128];
     char plik[128];
     long sent, read, sent_full=0, dl_file=0;
-    int mail_count = 0;
+    int mail_count = 0, delimiter, from, last;
     char bufor[BUFSIZE];
     char state[] = "sel";
+    char message[SENDSIZE];
 
     char firstNum[6];
     char secondNum[6];
@@ -632,9 +631,9 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
         strcpy(firstNum, extractArgument(sequence_set, 1, ":\0"));
         strcpy(secondNum, extractArgument(sequence_set, 2, ":\0"));
     }
-
-    char message[SENDSIZE] = "OK FETCH completed";
-    message[strlen(message)] = '\0';
+    from = atoi(firstNum);
+    delimiter = atoi(secondNum);
+    printf("%d %d\n", from, delimiter);
     char tag[] = "untagged";
 
     if (CheckState(gn, state)==false) {
@@ -648,12 +647,13 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
             SendMessage(gn, message, tag);
         }
         else {
+            sprintf(number, "%d", mail_count);
             while((DirEntry=readdir(folder))!=NULL)
             { 
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
-                sprintf(number, "%d", mail_count);
-                if (strcmp(firstNum, number)==0) {
+                if (from<=mail_count && delimiter>=mail_count && mail_count!=last) {
+                    last=mail_count;
                     sprintf(plik, "%s/%s/%s", gn->user, gn->mailbox, DirEntry->d_name);
                     file = fopen(plik, "rb");
                     struct stat fileinfo;  
@@ -663,19 +663,27 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
                         break;
                     }
                     dl_file = fileinfo.st_size;
+                    sprintf(message, "* FETCH %d ...\n", mail_count);
+                    SendMessage(gn, message, tag);
                     while (sent_full<dl_file) {
                         read = fread(bufor, 1, BUFSIZE, file);
                         bufor[strlen(bufor)-1] = '\n';
-                        sent = send(gn->nr, bufor, strlen(bufor), 0);
+                        sent = SendMessage(gn, bufor, tag);
                         if (read != sent)
                             break;
                         sent_full += sent;
                     }
+                    strcpy(bufor, "");
+                    sent_full = 0;
+                    sent = 0;
                     fclose(file);
                 }
+                
             }
             closedir(folder);
             strcpy(tag, "tagged");
+            strcpy(message, "OK FETCH completed");
+            message[strlen(message)] = '\0';
             SendMessage(gn, message, tag);
         }
     }
@@ -858,7 +866,7 @@ void CommandParser( pmystruct gn, char *command) {
         }
     } 
     if (!found) {
-        char message[SENDSIZE] = "Command not found or wrong number of arguments";
+        char message[SENDSIZE] = "BAD [] Command not found or wrong number of arguments";
         message[strlen(message)] = '\0';
         char tag[] = "tagged";
         SendMessage(gn, message, tag);

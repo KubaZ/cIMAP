@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <fstream>
+#include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
 #if defined(__APPLE__)
@@ -23,6 +24,7 @@
 #define PORT htons(21212)
 #define BUFSIZE 2048
 #define SENDSIZE 512
+const unsigned char isFile =0x8;
 
 /*Definicje wskaźników do funkcji z różną ilością argumentów*/
 typedef void (*FunctionWithOneParameter) (struct klient *gn);
@@ -51,7 +53,7 @@ licznik poleceń oraz aktualnie wybrany folder.
 */
 struct klient{
     int nr;
-    char state[5];
+    char state[4];
     char user[30];
     char licznik[5];
     char mailbox[100];
@@ -86,15 +88,15 @@ char *str2md5(const char *str, int length) {
     return out;
 }
 
-char *extractArgument(char *text, int argc) {
+char *extractArgument(char *text, int argc, const char delimiter[]) {
     char *arg;
     char copy[strlen(text)];
     strcpy(copy, text);
     int i=1;
-    arg = strtok(copy, " \n\0");
+    arg = strtok(copy, delimiter);
     if (argc>=2) {
         while (i<argc) {
-            arg = strtok(NULL, " \n\0");
+            arg = strtok(NULL, delimiter);
             i++;
         }
         return arg;
@@ -248,7 +250,6 @@ void Select(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
     char *dir = new char[128];
-    unsigned char isFile =0x8;
     int mail_count = 0;
     char state[] = "aut";
     char state2[] = "sel";
@@ -304,7 +305,6 @@ void Examine(pmystruct gn, char *mailbox_name) {
     DIR *folder;
     struct dirent *DirEntry;
     char *dir = new char[128];
-    unsigned char isFile =0x8;
     int mail_count = 0;
     char state[] = "aut";
     char state2[] = "sel";
@@ -385,6 +385,11 @@ void Delete(pmystruct gn, char *mailbox_name) {
     char state2[] = "sel";
     char tag[] = "tagged";
     char message[SENDSIZE];
+    DIR *folder;
+    struct dirent *DirEntry;
+    struct stat dirinfo;
+    char filepath[256];
+    bool subfolder=false;
 
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -399,14 +404,41 @@ void Delete(pmystruct gn, char *mailbox_name) {
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
         } else {
-            if (rmdir(com)==0) {
-                strcpy(message, "OK DELETE completed");
-                message[strlen(message)] = '\0';
-                SendMessage(gn, message, tag);
-            } else {
+            folder = opendir(com);
+            if (stat(com, &dirinfo)>0) {
+                printf("S: %s\n", strerror(errno));
                 sprintf(message, "NO [CANNOT] %s", strerror(errno));
                 message[strlen(message)] = '\0';
                 SendMessage(gn, message, tag);
+            } else {
+                while((DirEntry=readdir(folder))!=NULL) {
+                    if(DirEntry->d_name[0] == '.') continue;
+                    if(DirEntry->d_type != isFile) {
+                        sprintf(message, "NO [CANNOT] %s", strerror(errno));
+                        message[strlen(message)] = '\0';
+                        SendMessage(gn, message, tag);
+                        subfolder=true;
+                        break;
+                    }
+                }
+                if(!subfolder) {
+                    rewinddir(folder);
+                    while((DirEntry=readdir(folder))!=NULL) {
+                        if(DirEntry->d_name[0] == '.') continue;
+                        sprintf(filepath, "%s/%s", com, DirEntry->d_name);
+                        printf("%s\n", filepath);
+                        remove(filepath);
+                    }
+                    if (rmdir(com)==0) {
+                        strcpy(message, "OK DELETE completed");
+                        message[strlen(message)] = '\0';
+                        SendMessage(gn, message, tag);
+                    } else {
+                        sprintf(message, "NO [CANNOT] %s", strerror(errno));
+                        message[strlen(message)] = '\0';
+                        SendMessage(gn, message, tag);
+                    }
+                }
             }
         }
     }
@@ -550,6 +582,7 @@ void Close(pmystruct gn) {
         WrongState(gn);
     } else {
         strcpy(gn->state, "aut");
+        strcpy(gn->mailbox, "");
         SendMessage(gn, message, tag);
     }
 }
@@ -581,9 +614,8 @@ void Search(pmystruct gn, char *search_criteria) {
 void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     DIR *folder;
     FILE* file;
-    
     struct dirent *DirEntry;
-    unsigned char isFile =0x8;
+    
     char *number = new char[5];
     char *dir = new char[128];
     char plik[128];
@@ -591,6 +623,15 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     int mail_count = 0;
     char bufor[BUFSIZE];
     char state[] = "sel";
+
+    char firstNum[6];
+    char secondNum[6];
+    if (strchr(sequence_set, ':')==NULL) {
+        strcpy(firstNum, extractArgument(sequence_set, 1, ":\0"));
+    } else {
+        strcpy(firstNum, extractArgument(sequence_set, 1, ":\0"));
+        strcpy(secondNum, extractArgument(sequence_set, 2, ":\0"));
+    }
 
     char message[SENDSIZE] = "OK FETCH completed";
     message[strlen(message)] = '\0';
@@ -612,23 +653,18 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
                 sprintf(number, "%d", mail_count);
-                printf("%d %s\n", mail_count, number);
-                if (strcmp(sequence_set, number)==0) {
+                if (strcmp(firstNum, number)==0) {
                     sprintf(plik, "%s/%s/%s", gn->user, gn->mailbox, DirEntry->d_name);
-                    printf("%s\n",plik);
                     file = fopen(plik, "rb");
-                    struct stat fileinfo;
-                    
+                    struct stat fileinfo;  
                     if (stat(plik, &fileinfo) < 0)
                     {
                         printf("%s\n",strerror(errno));
                         break;
                     }
                     dl_file = fileinfo.st_size;
-                    printf("%ld\n", dl_file);
                     while (sent_full<dl_file) {
                         read = fread(bufor, 1, BUFSIZE, file);
-                        printf("%s", bufor);
                         bufor[strlen(bufor)-1] = '\n';
                         sent = send(gn->nr, bufor, strlen(bufor), 0);
                         if (read != sent)
@@ -636,7 +672,6 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
                         sent_full += sent;
                     }
                     fclose(file);
-                    break;
                 }
             }
             closedir(folder);
@@ -646,13 +681,23 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     }
 }
 
-void Store(pmystruct gn/*sequence set
-               message data item name
+void Store(pmystruct gn, char *sequence_set
+               /*message data item name
                value for message data item*/) {
     char state[] = "sel";
     char message[SENDSIZE] = "OK STORE completed";
     message[strlen(message)] = '\0';
     char tag[] = "tagged";
+
+    char firstNum[6];
+    char secondNum[6];
+    if (strchr(sequence_set, ':')==NULL) {
+        strcpy(firstNum, extractArgument(sequence_set, 1, ":\0"));
+    } else {
+        strcpy(firstNum, extractArgument(sequence_set, 1, ":\0"));
+        strcpy(secondNum, extractArgument(sequence_set, 2, ":\0"));
+    }
+
     if (CheckState(gn, state)==false) {
         WrongState(gn);
     } else {
@@ -661,13 +706,54 @@ void Store(pmystruct gn/*sequence set
 }
 
 void Copy(pmystruct gn, char *sequence_set, char *mailbox_name) {
+    DIR *folder;
+    FILE *file1, *file2;
+    struct dirent *DirEntry;
+    int input, output, mail_count=0;
+    char sourceFolder[128];
+    char filename[256];
+
     char state[] = "sel";
     char message[SENDSIZE] = "OK COPY completed";
     message[strlen(message)] = '\0';
     char tag[] = "tagged";
+
+    char firstNum[6];
+    char secondNum[6];
+    char number[10];
+    char ch;
+    if (strchr(sequence_set, ':')==NULL) {
+        strcpy(firstNum, extractArgument(sequence_set, 1, ":\0"));
+    } else {
+        strcpy(firstNum, extractArgument(sequence_set, 1, ":\0"));
+        strcpy(secondNum, extractArgument(sequence_set, 2, ":\0"));
+    }
+
     if (CheckState(gn, state)==false) {
         WrongState(gn);
-    } else {
+    } else {    
+        sprintf(sourceFolder, "%s/%s", gn->user, gn->mailbox);
+        folder = opendir(sourceFolder);
+        while((DirEntry=readdir(folder))!=NULL) { 
+            if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
+            mail_count++;
+            sprintf(number, "%d", mail_count);
+            if (strcmp(firstNum, number)==0) {
+                sprintf(filename, "%s/%s/%s", gn->user, gn->mailbox, DirEntry->d_name);
+                file1 = fopen(filename, "rb");
+                sprintf(filename, "%s/%s/%s", gn->user, mailbox_name, DirEntry->d_name);
+                file2 = fopen(filename, "wb");
+                while(!feof(file1))
+                {
+                    ch = getc(file1);
+                    putc(ch,file2);
+                }
+                putc('\0',file2);
+                fclose(file1);
+                fclose(file2);
+            }
+        }
+        
         SendMessage(gn, message, tag);
     }
 }
@@ -700,12 +786,12 @@ void Licznik(char *licznik) {
         licznik[1]++;
         licznik[2]='0';
         licznik[3]='0';
-    }/*else if (licznik[0]!='z'){
+    }else if (licznik[0]!='z'){
         licznik[0]++;
         licznik[1]='0';
         licznik[2]='0';
         licznik[3]='0';
-    }*/
+    }
 }
 void CommandParser( pmystruct gn, char *command) {
 
@@ -735,7 +821,7 @@ void CommandParser( pmystruct gn, char *command) {
     }
 
     char com[20];
-    strcpy(com, extractArgument(command, 1));
+    strcpy(com, extractArgument(command, 1, " \n\0"));
     for (int i=0; i<strlen(com);i++) {
         com[i]=toupper(com[i]);
     }
@@ -753,7 +839,7 @@ void CommandParser( pmystruct gn, char *command) {
                 found=true;
                 int size = ml-argp[0];
                 char arg1[size];
-                strcpy(arg1,extractArgument(command, 2));
+                strcpy(arg1,extractArgument(command, 2, " \n\0"));
                 twoFunc[i].funcPtr(gn, arg1);
             }
         }
@@ -765,8 +851,8 @@ void CommandParser( pmystruct gn, char *command) {
                 char arg1[size];
                 size = ml-argp[1];
                 char arg2[size];
-                strcpy(arg1,extractArgument(command, 2));
-                strcpy(arg2,extractArgument(command, 3));
+                strcpy(arg1,extractArgument(command, 2, " \n\0"));
+                strcpy(arg2,extractArgument(command, 3, " \n\0"));
                 threeFunc[i].funcPtr(gn, arg1, arg2);
             }
         }

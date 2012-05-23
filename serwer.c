@@ -20,7 +20,6 @@
 #  include <openssl/md5.h>
 #endif
 
-
 #define PORT htons(21212)
 #define BUFSIZE 2048
 #define SENDSIZE 512
@@ -74,17 +73,13 @@ char *str2md5(const char *str, int length) {
     char *out = new char[33];
 
     MD5_Init(&c);
-
     MD5_Update(&c, str, length);
-
     MD5_Final(digest, &c);
-    strcpy(out, (const char*)digest);
-    //sprintf(out, "%x", digest);
-    /*for (n = 0; n < 16; ++n) {
-        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
-    }
+    /*for (n = 0; n < 32; ++n) {
+        snprintf(&(out[n]), 16, "%x", (unsigned int)digest[n]);
+    }*/
+    /*sprintf(out, "%x", digest);
     out[33]='\0';*/
-    //printf("crypted: %s\n", out);
     return out;
 }
 
@@ -166,7 +161,6 @@ int Search_User(char *fname, char *str) {
 //          Client Commands - Any State
 
 void Capability(pmystruct gn) {
-    
     char message[SENDSIZE];
     strcpy(message, "* CAPABILITY IMAP4rev1 AUTH=PLAIN\n");
     SendMessage(gn, message, "debug");
@@ -198,8 +192,8 @@ void Login(pmystruct gn, char *user, char *password) {
     char message[100];
     strcpy(message, "OK LOGIN completed\n");
     char state[] = "non";
-    //char output[33];
-    //strcpy(output, str2md5(password, strlen(password)));
+    /*char *output;
+    strcpy(output, str2md5(password, strlen(password)));*/
     if (CheckState(gn, state)==true) {
         char file[] = "logins.txt";
         char line[128];
@@ -210,7 +204,7 @@ void Login(pmystruct gn, char *user, char *password) {
             strcpy(gn->state, "aut");
             SendMessage(gn, message, "debug");
         } else {
-            strcpy(message, "NO [AUTHENTICATIONFAILED] Authentication failed\n");       
+            strcpy(message, "NO [CANNOT] Authentication failed\n");       
             SendMessage(gn, message, "debug");
         }
     }
@@ -219,6 +213,7 @@ void Login(pmystruct gn, char *user, char *password) {
     }
     
 }
+
 void Authenticate(pmystruct gn, char *mechanism) {
     char message[SENDSIZE] = "OK AUTHENTICATE completed\n";
     SendMessage(gn, message, "debug");
@@ -389,11 +384,9 @@ void Examine(pmystruct gn, char *mailbox_name) {
 void Create(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
-    
     char message[SENDSIZE];
     int result_code=0;
-    char newdir[256], subdir[128], dir[256];
-
+    char newdir[256], subdir[128];
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
     } else {
@@ -404,10 +397,13 @@ void Create(pmystruct gn, char *mailbox_name) {
             for (int i=0; i<strlen(mailbox_name); i++) {
                 if(i==strlen(mailbox_name)-1 || mailbox_name[i]=='.') {
                     for (int a = 0; a<=i; a++) {
-                        if (a==i && mailbox_name[a] == '.')
+                        if (a==i) {
+                            subdir[a]='\0';
                             break;
+                        }
                         subdir[a] = mailbox_name[a];
                     }
+                    printf("%s\n", subdir);
                     struct stat dirinfo;
                     sprintf(newdir,"%s/inbox/.%s", gn->user, subdir);
                     if (stat(newdir, &dirinfo)<0) {
@@ -418,13 +414,6 @@ void Create(pmystruct gn, char *mailbox_name) {
                             SendMessage(gn, message, "debug");
                             break;
                         }
-                        /*sprintf(dir,"%s/new", newdir);
-                        mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
-                        sprintf(dir,"%s/tmp", newdir);
-                        mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
-                        sprintf(dir,"%s/cur", newdir);
-                        mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
-                        umask(process_mask);*/
                     }
                     
                 }
@@ -440,7 +429,6 @@ void Create(pmystruct gn, char *mailbox_name) {
 void Delete(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
-    
     char message[SENDSIZE];
     DIR *folder;
     struct dirent *DirEntry;
@@ -494,7 +482,6 @@ void Delete(pmystruct gn, char *mailbox_name) {
 void Rename(pmystruct gn, char *mailbox_name, char *new_mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
-    
     struct stat dirinfo;
     char message[SENDSIZE];
 
@@ -526,7 +513,6 @@ void Subscribe(pmystruct gn, char *mailbox_name) {
     char state2[] = "sel";
     char message[SENDSIZE] = "OK SUBSCRIBE completed\n";
     
-    
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
     } else {
@@ -538,7 +524,6 @@ void Unsubscribe(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
     char message[SENDSIZE] = "OK UNSUBSCRIBE completed\n";
-    
     
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -731,7 +716,6 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
                     break;
                 }
                 dl_file = fileinfo.st_size;
-                
                 sprintf(message, "* FETCH %d ...\n", mail_count);
                 SendMessage(gn, message, "debug");
                 while (sent_full<dl_file) {
@@ -784,15 +768,12 @@ void Copy(pmystruct gn, char *sequence_set, char *mailbox_name) {
     struct stat object;
     int input, output, mail_count=0, from, delimiter;
     char filename[256];
-
     char state[] = "sel";
-    char message[SENDSIZE] = "OK COPY completed\n";
-    
-    
+    char message[SENDSIZE] = "OK COPY completed\n";   
     char ch;
-
     char firstNum[6];
     char secondNum[6];
+
     if (strchr(sequence_set, ':')==NULL) {
         strcpy(firstNum, extractArgument(sequence_set, 1, ":"));
     } else {
@@ -811,7 +792,6 @@ void Copy(pmystruct gn, char *sequence_set, char *mailbox_name) {
     } else {
         if(folder==NULL) {
             sprintf(message, "NO [CANNOT] %s\n", strerror(errno));
-            
             SendMessage(gn, message, "debug");
         } else {
             folder = opendir(gn->mailbox);
@@ -929,14 +909,11 @@ void CommandParser( pmystruct gn, char *command) {
                 strcpy(arg1,extractArgument(command, 2, " \n\r\f"));
                 strcpy(arg2,extractArgument(command, 3, " \n\r\f"));
                 threeFunc[i].funcPtr(gn, arg1, arg2);
-
             }
         }
     } 
     if (!found) {
         char message[SENDSIZE] = "BAD [CANNOT] command unknown or arguments invalid\n";
-        
-        
         SendMessage(gn, message, "debug");
     }
     Licznik(gn->licznik);
@@ -981,7 +958,6 @@ int main(void)
     adr.sin_addr.s_addr = INADDR_ANY;
     memset(adr.sin_zero, 0, sizeof(adr.sin_zero));
     
-    
     if (bind(gn_nasluch, (struct sockaddr*) &adr, dladr) < 0)
     {
         printf("S: %s\n", strerror(errno));
@@ -1018,7 +994,7 @@ int main(void)
             strcpy(user->state,"non");
             Greeting(user);
             while(1){
-                memset(bufor, 0, BUFSIZE);
+                memset(bufor, 0, BUFSIZE+1);
                 n=recvtimeout(user->nr, bufor, BUFSIZE, 1800);
                 if (n == -1) {
                     perror("recvtimeout");

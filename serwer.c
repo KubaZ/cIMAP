@@ -70,7 +70,6 @@ void str2md5(char *str, char *out) {
     int n;
     MD5_CTX c;
     unsigned char digest[16];
-    char temp[33];
 
     MD5_Init(&c);
     MD5_Update(&c, str, strlen(str));
@@ -78,6 +77,7 @@ void str2md5(char *str, char *out) {
     for (n = 0; n < 16; ++n) {
         snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
     }
+    out[33]='\0';
 }
 
 char *extractArgument(char *text, int argc, const char delimiter[]) {
@@ -186,15 +186,20 @@ void Starttls(pmystruct gn) {
 }
 
 void Login(pmystruct gn, char *user, char *password) {
+
     char message[100];
     strcpy(message, "OK LOGIN completed\n");
     char state[] = "non";
     char *output;
+    FILE* logins;
     str2md5(password, output);
     if (CheckState(gn, state)==true) {
         char file[] = "logins.txt";
         char line[128];
         sprintf(line, "%s %s", user, output);
+        logins = fopen("log2.txt","a+"); 
+        fprintf(logins,"S: %s\n", line);
+        fclose(logins);
         if (Search_User(file, line)==0){
             strcpy(gn->user, user);
             gn->user[strlen(gn->user)] = '\0';
@@ -393,7 +398,12 @@ void Create(pmystruct gn, char *mailbox_name) {
                 if(i==strlen(mailbox_name)-1 || mailbox_name[i]=='.') {
                     for (int a = 0; a<=i; a++) {
                         if (a==i) {
-                            subdir[a]='\0';
+                            if (mailbox_name[i]=='.')
+                                subdir[a]='\0';
+                            else {
+                                subdir[a] = mailbox_name[a];
+                                subdir[a+1]='\0';
+                            }
                             break;
                         }
                         subdir[a] = mailbox_name[a];
@@ -425,11 +435,12 @@ void Delete(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
     char message[SENDSIZE];
-    DIR *folder;
+    DIR *folder, *inbox;
     struct dirent *DirEntry;
     struct stat dirinfo;
     char filepath[256];
     bool subfolder=false;
+    char subdir[256];
 
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -444,31 +455,48 @@ void Delete(pmystruct gn, char *mailbox_name) {
                 sprintf(message, "NO [CANNOT] %s\n", strerror(errno));
                 SendMessage(gn, message, "debug");
             } else {
-                folder = opendir(com);
-                while((DirEntry=readdir(folder))!=NULL) {
+                sprintf(subdir, "%s/inbox", gn->user);
+                inbox = opendir(subdir);
+                while((DirEntry=readdir(inbox))!=NULL) {
                     if(strcmp(DirEntry->d_name, ".") == 0 || strcmp(DirEntry->d_name, "..") == 0) continue;
-                    if(DirEntry->d_type != isFile) {
+                    sprintf(subdir, "%s.", mailbox_name);
+                    //printf("%s | %s\n", DirEntry->d_name, mailbox_name);
+                    if(strstr(DirEntry->d_name, subdir) && DirEntry->d_namlen > strlen(mailbox_name)) {
                         sprintf(message, "NO [CANNOT] maibox has subfolders\n");
                         SendMessage(gn, message, "debug");
                         subfolder=true;
                         break;
                     }
                 }
-                if(!subfolder) {
-                    rewinddir(folder);
+                if (!subfolder) {
+                    folder = opendir(com);
                     while((DirEntry=readdir(folder))!=NULL) {
-                        if(DirEntry->d_name[0] == '.') continue;
-                        sprintf(filepath, "%s/%s", com, DirEntry->d_name);
-                        remove(filepath);
+                        if(strcmp(DirEntry->d_name, ".") == 0 || strcmp(DirEntry->d_name, "..") == 0) continue;
+                        if(DirEntry->d_type != isFile) {
+                            sprintf(message, "NO [CANNOT] maibox has subfolders\n");
+                            SendMessage(gn, message, "debug");
+                            subfolder=true;
+                            break;
+                        }
                     }
-                    if (rmdir(com)==0) {
-                        strcpy(message, "OK DELETE completed\n");
-                        SendMessage(gn, message, "debug");
-                    } else {
-                        sprintf(message, "NO [CANNOT] %s\n", strerror(errno));
-                        SendMessage(gn, message, "debug");
+                    if(!subfolder) {
+                        rewinddir(folder);
+                        while((DirEntry=readdir(folder))!=NULL) {
+                            if(DirEntry->d_name[0] == '.') continue;
+                            sprintf(filepath, "%s/%s", com, DirEntry->d_name);
+                            remove(filepath);
+                        }
+                        if (rmdir(com)==0) {
+                            strcpy(message, "OK DELETE completed\n");
+                            SendMessage(gn, message, "debug");
+                        } else {
+                            sprintf(message, "NO [CANNOT] %s\n", strerror(errno));
+                            SendMessage(gn, message, "debug");
+                        }
                     }
+                    closedir(folder);
                 }
+                
             }
         }
     }
@@ -489,8 +517,8 @@ void Rename(pmystruct gn, char *mailbox_name, char *new_mailbox_name) {
         }
         char com[100];
         char com2[100];
-        sprintf(com, "%s/%s", gn->mailbox, mailbox_name);
-        sprintf(com2, "%s/%s", gn->mailbox, new_mailbox_name);
+        sprintf(com, "%s/%s", gn->user, mailbox_name);
+        sprintf(com2, "%s/%s", gn->user, new_mailbox_name);
             if (rename(com, com2)==0) {
                 strcpy(message, "OK RENAME completed\n");
                 
@@ -595,9 +623,7 @@ void Status(pmystruct gn, char *mailbox_name) {
     }
 }
 
-void Append(pmystruct gn, char *mailbox_name/*OPTIONAL flag parenthesized list
-               OPTIONAL date/time string
-               message literal*/) {
+void Append(pmystruct gn, char *mailbox_name/*OPTIONAL flag parenthesized list OPTIONAL date/time string message literal*/) {
     char state[] = "aut";
     char state2[] = "sel";
     char message[SENDSIZE] = "OK APPEND completed\n";
@@ -792,7 +818,7 @@ void Copy(pmystruct gn, char *sequence_set, char *mailbox_name) {
                         ch = getc(file1);
                         putc(ch,file2);
                     }
-                    putc('\0',file2);
+                    putc('\n',file2);
                     fclose(file1);
                     fclose(file2);
                 }

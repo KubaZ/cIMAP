@@ -1,0 +1,34 @@
+From owner-is-all-compcont@bham.ac.uk Fri Aug 18 15:10:01 2000
+Received: from bham.ac.uk by isdux1.bham.ac.uk (8.8.8/1.1.8.2/14Aug95-0452PM)
+id PAA0000016479; Fri, 18 Aug 2000 15:10:00 +0100 (BST)
+Received: from majordom by bham.ac.uk with local (Exim 3.16 #3)
+id 13PmpO-0000XU-00
+for IS-ALL-COMPCONT-outgoing@bham.ac.uk; Fri, 18 Aug 2000 15:08:58 +0100
+Received: from majordom by bham.ac.uk with local (Exim 3.16 #3)
+id 13PmpN-0000XK-00
+for all-compcont-outgoing@bham.ac.uk; Fri, 18 Aug 2000 15:08:57 +0100
+Received: from isdugp.bham.ac.uk ([147.188.128.15] helo=isdux1.bham.ac.uk)
+by bham.ac.uk with esmtp (Exim 3.16 #3)
+id 13PmpM-0000XA-00; Fri, 18 Aug 2000 15:08:56 +0100
+Received: by isdux1.bham.ac.uk (8.8.8/1.1.8.2/14Aug95-0452PM)
+id PAA0000009231; Fri, 18 Aug 2000 15:09:56 +0100 (BST)
+Message-Id: <200008181409.PAA0000009231@isdux1.bham.ac.uk>
+Subject: Netscape vulnerability fix
+To: all-compcont@bham.ac.uk
+Date: Fri, 18 Aug 2000 15:09:56 +0100 (BST)
+From: Chris Bayliss <C.B.Bayliss@bham.ac.uk>
+Reply-To: C.B.Bayliss@bham.ac.uk
+X-Mailer: ELM [version 2.4 PL25]
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Sender: owner-is-all-compcont@bham.ac.uk
+Precedence: bulk
+Status: RO
+Netscape have released a new version of Netscape Communicator (4.75) which is not subject to the Java vulnerability announced preciously on this list.
+If you use a vulnerable version of Netscape (version 4.0 - 4.74) it is 
+recommended that you upgrade.
+
+Chris Bayliss
+Information Services
+ÿ

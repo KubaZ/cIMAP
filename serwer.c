@@ -233,6 +233,8 @@ void Select(pmystruct gn, char *mailbox_name) {
     int mail_count = 0;
     char state[] = "aut";
     char state2[] = "sel";
+    char *flags;
+    int R=0,D=0,A=0,F=0,S=0,T=0,first_unseen=0;
     
     char message[SENDSIZE];
     
@@ -256,14 +258,51 @@ void Select(pmystruct gn, char *mailbox_name) {
             {
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
+                flags=strpbrk(DirEntry->d_name, "|");
+                printf("%s\n", flags);
+                if (strstr(flags, "info")!=NULL) {
+                    R++;
+                    if (R==1)
+                        first_unseen=mail_count;
+                }
+                if (strstr(flags, "D")!=NULL) {
+                    D++;
+                }
+                if (strstr(flags, "R")!=NULL) {
+                    A++;
+                }
+                if (strstr(flags, "F")!=NULL) {
+                    F++;
+                }
+                if (strstr(flags, "T")!=NULL) {
+                    T++;
+                }
+                if (strstr(flags, "S")!=NULL) {
+                    S++;
+                }
                 //printf("Found mail: %s\n", DirEntry->d_name);  
             }
             closedir(folder);
             sprintf(message, "* %d EXISTS\n", mail_count);
             SendMessage(gn, message, "debug");
-            sprintf(message, "* %d RECENT\n", mail_count);
+            sprintf(message, "* %d RECENT\n", R);
             SendMessage(gn, message, "debug");
-            strcpy(message, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\n");
+            if (first_unseen!=0) {
+                sprintf(message, "* OK [UNSEEN %d] Message %d is first unseen\n", first_unseen, first_unseen);
+                SendMessage(gn, message, "debug");
+            }
+            strcpy(message, "* FLAGS (");
+            if (A>0)
+                strcat(message, "\\Answered ");
+            if (F>0)
+                strcat(message, "\\Flagged ");
+            if (T>0)
+                strcat(message, "\\Deleted ");
+            if (S>0)
+                strcat(message, "\\Seen ");
+            if (D>0)
+                strcat(message, "\\Draft ");
+            strcat(message, ")\n");
             SendMessage(gn, message, "debug"); 
             for (int i=0; i<strlen(mailbox_name);i++) {
                 mailbox_name[i]=toupper(mailbox_name[i]);
@@ -326,7 +365,7 @@ void Create(pmystruct gn, char *mailbox_name) {
     
     char message[SENDSIZE];
     int result_code=0;
-    char newdir[256], subdir[128];
+    char newdir[256], subdir[128], dir[256];
 
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -347,13 +386,20 @@ void Create(pmystruct gn, char *mailbox_name) {
                     if (stat(newdir, &dirinfo)<0) {
                         mode_t process_mask = umask(0);
                         result_code = mkdir(newdir, S_IRWXU | S_IRWXG | S_IRWXO);
-                        umask(process_mask);
                         if (result_code<0) {
                             sprintf(message, "NO [CANNOT] %s\n", strerror(errno));
                             SendMessage(gn, message, "debug");
                             break;
                         }
+                        /*sprintf(dir,"%s/new", newdir);
+                        mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
+                        sprintf(dir,"%s/tmp", newdir);
+                        mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
+                        sprintf(dir,"%s/cur", newdir);
+                        mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
+                        umask(process_mask);*/
                     }
+                    
                 }
             }
             if (result_code==0) {
@@ -384,11 +430,11 @@ void Delete(pmystruct gn, char *mailbox_name) {
                 strcpy(message, "NO [CANNOT] can't delete mailbox with that name\n");
                 SendMessage(gn, message, "debug");
         } else {
-            folder = opendir(com);
-            if (stat(com, &dirinfo)>0) {
+            if (stat(com, &dirinfo)<0) {
                 sprintf(message, "NO [CANNOT] %s\n", strerror(errno));
                 SendMessage(gn, message, "debug");
             } else {
+                folder = opendir(com);
                 while((DirEntry=readdir(folder))!=NULL) {
                     if(strcmp(DirEntry->d_name, ".") == 0 || strcmp(DirEntry->d_name, "..") == 0) continue;
                     if(DirEntry->d_type != isFile) {
@@ -501,8 +547,14 @@ void List(pmystruct gn, char *reference_name, char *mailbox_name) {
             {
                 if(strcmp(DirEntry->d_name, ".") == 0 || strcmp(DirEntry->d_name, "..") == 0 || DirEntry->d_type == isFile ) continue;
                 if ((strstr(DirEntry->d_name, mailbox_name)) != NULL || strcmp(mailbox_name, "*")==0) {
-                    sprintf(message, "* LIST () \".\" %s\n", DirEntry->d_name);
-                    SendMessage(gn, message, "debug");
+                    if(strstr(DirEntry->d_name, ".") != NULL) {
+                        sprintf(message, "* LIST () \".\" %s\n", DirEntry->d_name);
+                        SendMessage(gn, message, "debug");
+                    }
+                    else {
+                        sprintf(message, "* LIST () \"/\" %s\n", DirEntry->d_name);
+                        SendMessage(gn, message, "debug");
+                    }
                 }
             }
             closedir(folder);
@@ -571,7 +623,6 @@ void Close(pmystruct gn) {
     char state[] = "sel";
     char message[SENDSIZE] = "OK CLOSE completed\n";
     
-    
     if (CheckState(gn, state)==false) {
         WrongState(gn);
     } else {
@@ -617,7 +668,7 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     char bufor[BUFSIZE];
     char state[] = "sel";
     char message[SENDSIZE];
-    
+    char *checked;
 
     char firstNum[6];
     char secondNum[6];
@@ -658,7 +709,6 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
                 SendMessage(gn, message, "debug");
                 while (sent_full<dl_file) {
                     read = fread(bufor, 1, BUFSIZE, file);
-                    bufor[strlen(bufor)-1] = '\n';
                     sent = SendMessage(gn, bufor, "not");
                     if (read != sent)
                         break;
@@ -824,19 +874,16 @@ void CommandParser( pmystruct gn, char *command) {
 
     char com[20];
     strcpy(com, extractArgument(command, 1, " \n\r\f"));
-    for (int i=0; i<strlen(com);i++) {
-        com[i]=toupper(com[i]);
-    }
     if (argcount==1) {
         for (int i = 0; i<7; i++) {
-            if (strcmp(com,oneFunc[i].funcName)==0) {
+            if (strcasecmp(com,oneFunc[i].funcName)==0) {
                 found=true;
                 oneFunc[i].funcPtr(gn);
             }
         }
     } else if (argcount==2) {
         for (int i = 0; i<9; i++) {
-            if (strcmp(com,twoFunc[i].funcName)==0) {
+            if (strcasecmp(com,twoFunc[i].funcName)==0) {
                 found=true;
                 int size = ml-argp[0];
                 char arg1[size];
@@ -846,7 +893,7 @@ void CommandParser( pmystruct gn, char *command) {
         }
     } else if (argcount==3) {
         for (int i = 0; i<6; i++) {
-            if (strcmp(com,threeFunc[i].funcName)==0) {
+            if (strcasecmp(com,threeFunc[i].funcName)==0) {
                 found=true;
                 int size = ml-argp[0];
                 char arg1[size];

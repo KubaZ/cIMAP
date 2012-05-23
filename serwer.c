@@ -259,7 +259,6 @@ void Select(pmystruct gn, char *mailbox_name) {
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
                 flags=strpbrk(DirEntry->d_name, "|");
-                printf("%s\n", flags);
                 if (strstr(flags, "info")!=NULL) {
                     R++;
                     if (R==1)
@@ -304,19 +303,9 @@ void Select(pmystruct gn, char *mailbox_name) {
                 strcat(message, "\\Draft ");
             strcat(message, ")\n");
             SendMessage(gn, message, "debug"); 
-            for (int i=0; i<strlen(mailbox_name);i++) {
-                mailbox_name[i]=toupper(mailbox_name[i]);
-            }
             
-            if (strcmp(mailbox_name, "INBOX")==0 || strcmp(mailbox_name, "OUTBOX")==0) {
-                strcpy(message, "OK [READ-ONLY] SELECT completed\n");
-                
-                SendMessage(gn, message, "debug");
-            } else {
-                strcpy(message, "OK [READ-WRITE] SELECT completed\n");
-                
-                SendMessage(gn, message, "debug");
-            }
+            strcpy(message, "OK [READ-WRITE] SELECT completed\n");
+            SendMessage(gn, message, "debug");
         }
     }
 } 
@@ -329,11 +318,13 @@ void Examine(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
     char message[SENDSIZE];
+    char *flags;
+    int R=0,D=0,A=0,F=0,S=0,T=0,first_unseen=0;
     
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
     } else {
-        sprintf(dir, "%s/%s", gn->mailbox, mailbox_name);
+        sprintf(dir, "%s/%s", gn->user, mailbox_name);
         folder = opendir(dir);
         if(folder==NULL) {
             sprintf(message, "NO [CANNOT] %s\n", strerror(errno));
@@ -344,15 +335,51 @@ void Examine(pmystruct gn, char *mailbox_name) {
             {
                 if(DirEntry->d_name[0] == '.' || DirEntry->d_type != isFile ) continue;
                 mail_count++;
+                flags=strpbrk(DirEntry->d_name, "|");
+                if (strstr(flags, "info")!=NULL) {
+                    R++;
+                    if (R==1)
+                        first_unseen=mail_count;
+                }
+                if (strstr(flags, "D")!=NULL) {
+                    D++;
+                }
+                if (strstr(flags, "R")!=NULL) {
+                    A++;
+                }
+                if (strstr(flags, "F")!=NULL) {
+                    F++;
+                }
+                if (strstr(flags, "T")!=NULL) {
+                    T++;
+                }
+                if (strstr(flags, "S")!=NULL) {
+                    S++;
+                }
                 //printf("Found mail: %s\n", DirEntry->d_name);
             }
             closedir(folder);
             sprintf(message, "* %d EXISTS\n", mail_count);
             SendMessage(gn, message, "debug");
-            sprintf(message, "* %d RECENT\n", mail_count);
+            sprintf(message, "* %d RECENT\n", R);
             SendMessage(gn, message, "debug");
-            strcpy(message, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\n");
-            SendMessage(gn, message, "debug");
+            if (first_unseen!=0) {
+                sprintf(message, "* OK [UNSEEN %d] Message %d is first unseen\n", first_unseen, first_unseen);
+                SendMessage(gn, message, "debug");
+            }
+            strcpy(message, "* FLAGS (");
+            if (A>0)
+                strcat(message, "\\Answered ");
+            if (F>0)
+                strcat(message, "\\Flagged ");
+            if (T>0)
+                strcat(message, "\\Deleted ");
+            if (S>0)
+                strcat(message, "\\Seen ");
+            if (D>0)
+                strcat(message, "\\Draft ");
+            strcat(message, ")\n");
+            SendMessage(gn, message, "debug"); 
             strcpy(message, "OK [READ-ONLY] EXAMINE completed\n");
             SendMessage(gn, message, "debug");
         }

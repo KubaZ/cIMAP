@@ -66,21 +66,18 @@ pmystruct getpstruct() {
     return temp;
 }
 
-char *str2md5(const char *str, int length) {
+void str2md5(char *str, char *out) {
     int n;
     MD5_CTX c;
     unsigned char digest[16];
-    char *out = new char[33];
+    char temp[33];
 
     MD5_Init(&c);
-    MD5_Update(&c, str, length);
+    MD5_Update(&c, str, strlen(str));
     MD5_Final(digest, &c);
-    /*for (n = 0; n < 32; ++n) {
-        snprintf(&(out[n]), 16, "%x", (unsigned int)digest[n]);
-    }*/
-    /*sprintf(out, "%x", digest);
-    out[33]='\0';*/
-    return out;
+    for (n = 0; n < 16; ++n) {
+        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
+    }
 }
 
 char *extractArgument(char *text, int argc, const char delimiter[]) {
@@ -192,12 +189,12 @@ void Login(pmystruct gn, char *user, char *password) {
     char message[100];
     strcpy(message, "OK LOGIN completed\n");
     char state[] = "non";
-    /*char *output;
-    strcpy(output, str2md5(password, strlen(password)));*/
+    char *output;
+    str2md5(password, output);
     if (CheckState(gn, state)==true) {
         char file[] = "logins.txt";
         char line[128];
-        sprintf(line, "%s %s", user, password);
+        sprintf(line, "%s %s", user, output);
         if (Search_User(file, line)==0){
             strcpy(gn->user, user);
             gn->user[strlen(gn->user)] = '\0';
@@ -211,7 +208,6 @@ void Login(pmystruct gn, char *user, char *password) {
     else {
         WrongState(gn);
     }
-    
 }
 
 void Authenticate(pmystruct gn, char *mechanism) {
@@ -229,8 +225,7 @@ void Select(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
     char *flags;
-    int R=0,D=0,A=0,F=0,S=0,T=0,first_unseen=0;
-    
+    int R=0,D=0,A=0,F=0,S=0,T=0,first_unseen=0;   
     char message[SENDSIZE];
     
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
@@ -581,7 +576,6 @@ void Lsub(pmystruct gn, char *reference_name, char *mailbox_name) {
     char state2[] = "sel";
     char message[SENDSIZE] = "OK LSUB completed\n";
     
-    
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
     } else {
@@ -593,7 +587,6 @@ void Status(pmystruct gn, char *mailbox_name) {
     char state[] = "aut";
     char state2[] = "sel";
     char message[SENDSIZE] = "OK STATUS completed\n";
-    
     
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
@@ -609,7 +602,6 @@ void Append(pmystruct gn, char *mailbox_name/*OPTIONAL flag parenthesized list
     char state2[] = "sel";
     char message[SENDSIZE] = "OK APPEND completed\n";
     
-    
     if (CheckState(gn, state)==false && CheckState(gn, state2)==false) {
         WrongState(gn);
     } else {
@@ -621,8 +613,7 @@ void Append(pmystruct gn, char *mailbox_name/*OPTIONAL flag parenthesized list
 
 void Check(pmystruct gn) {
     char state[] = "sel";
-    char message[SENDSIZE] = "OK CHECK completed\n";
-    
+    char message[SENDSIZE] = "OK CHECK completed\n";  
     
     if (CheckState(gn, state)==false) {
         WrongState(gn);
@@ -646,8 +637,7 @@ void Close(pmystruct gn) {
 
 void Expunge(pmystruct gn) {
     char state[] = "sel";
-    char message[SENDSIZE] = "OK EXPUNGE completed\n";
-    
+    char message[SENDSIZE] = "OK EXPUNGE completed\n"; 
     
     if (CheckState(gn, state)==false) {
         WrongState(gn);
@@ -660,7 +650,6 @@ void Search(pmystruct gn, char *search_criteria) {
     char state[] = "sel";
     char message[SENDSIZE] = "OK SEARCH completed\n";
     
-    
     if (CheckState(gn, state)==false) {
         WrongState(gn);
     } else {
@@ -672,7 +661,6 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     DIR *folder;
     FILE* file;
     struct dirent *DirEntry;
-    
     char *number = new char[5];
     char plik[128];
     long sent, read, sent_full=0, dl_file=0;
@@ -681,9 +669,9 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
     char state[] = "sel";
     char message[SENDSIZE];
     char *checked;
-
     char firstNum[6];
     char secondNum[6];
+
     if (strchr(sequence_set, ':')==NULL) {
         strcpy(firstNum, extractArgument(sequence_set, 1, ":"));
     } else {
@@ -732,21 +720,17 @@ void Fetch(pmystruct gn, char *sequence_set, char *macro) {
             }
         }
         closedir(folder);
-        
         strcpy(message, "OK FETCH completed\n");
-        
         SendMessage(gn, message, "debug");
     }
 }
 
-void Store(pmystruct gn, char *sequence_set
-               /*message data item name
-               value for message data item*/) {
+void Store(pmystruct gn, char *sequence_set/*message data item namevalue for message data item*/) {
     char state[] = "sel";
     char message[SENDSIZE] = "OK STORE completed\n";
-    
     char firstNum[6];
     char secondNum[6];
+
     if (strchr(sequence_set, ':')==NULL) {
         strcpy(firstNum, extractArgument(sequence_set, 1, ":"));
     } else {
@@ -919,10 +903,7 @@ void CommandParser( pmystruct gn, char *command) {
     Licznik(gn->licznik);
 }
 
-
-
-int recvtimeout(int s, char *buf, int len, int timeout)
-{
+int recvtimeout(int s, char *buf, int len, int timeout) {
     fd_set fds;
     int n;
     struct timeval tv;
